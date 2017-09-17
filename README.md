@@ -9,17 +9,29 @@ Archived e-mails can thus be browsed and filtered comfotably with the build-in v
 Following pyhton libraries are required:
 
  sys
+ 
  os
+ 
  os
+ 
  sys
+ 
  re
+ 
  subprocess
+ 
  imaplib
+ 
  dateutil.parser
+ 
  hashlib
+ 
  json
+ 
  email
+ 
  shutil
+ 
  time
 
 The tool has been tested to work fine on Windows and Ubuntu, running Python 3.x and Qt4 or Qt5. Other versions of Python should work finde as well.
