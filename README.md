@@ -19,6 +19,8 @@ json
 email
 shutil
 time
+Qt4 or Qt5
+configparser
 
 The tool has been tested to work fine on Windows and Ubuntu, running Python 3.x and Qt4 or Qt5. Other versions of Python should work finde as well.
 
