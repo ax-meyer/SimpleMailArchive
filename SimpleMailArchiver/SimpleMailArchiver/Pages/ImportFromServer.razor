@@ -1,0 +1,94 @@
+﻿@page "/import-server"
+
+<PageTitle>Import mail from online account</PageTitle>
+
+@using SimpleMailArchiver.Data;
+@using MailKit;
+@using MailKit.Search;
+@using MailKit.Security;
+@using MailKit.Net.Imap;
+@using MimeKit;
+@using Microsoft.EntityFrameworkCore
+
+<h1>Import from mailserver</h1>
+
+<p>Select account: 
+    <select @bind="selectedAccountID">
+        @foreach (var acc in Program.Config.Accounts)
+        {
+            <option value="@acc.ID">@acc.AccountDisplayName</option>
+        }
+    </select>
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@importRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
+</p>
+
+<p role="status">@infoMessage</p>
+<table class="table-responsive">
+    <tr>
+        <td>Current Folder</td>
+        <td style="padding-left: 10px !important">@progress?.CurrentFolder</td>
+    </tr>
+    <tr>
+        <td>Processed messages</td>
+        <td style="padding-left: 10px !important">@progress?.ParsedMessageCount</td>
+    </tr>
+    <tr>
+        <td>Imported messages</td>
+        <td style="padding-left: 10px !important">@progress?.ImportedMessageCount</td>
+    </tr>
+</table>
+
+
+
+@code {
+    private int selectedAccountID;
+    private bool importRunning = false;
+    private CancellationTokenSource ctSource;
+    private string infoMessage;
+
+    private ImportProgress progress = new();
+
+    private void Cancel() => ctSource?.Cancel();
+
+    private async Task ImportFromAccount()
+    {
+        progress = new();
+        ctSource = new CancellationTokenSource();
+        progress.Ct = ctSource.Token;
+        importRunning = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            infoMessage = "Import running, please wait...";
+
+            var mailTask = ImportMessages.ImportFromServer(selectedAccountID, progress);
+
+            while (!mailTask.IsCompleted)
+            {
+                await InvokeAsync(StateHasChanged);
+                Thread.Sleep(1000);
+            }
+
+            infoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+        }
+        catch (OperationCanceledException)
+        {
+            infoMessage = "Import was cancelled.";
+        }
+        catch (InvalidDataException)
+        {
+            infoMessage = "INTERNAL ERROR! Hash Mismatch";
+        }
+        finally
+        {
+            importRunning = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

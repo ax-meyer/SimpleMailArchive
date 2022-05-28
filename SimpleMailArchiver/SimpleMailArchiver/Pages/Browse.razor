@@ -28,7 +28,8 @@ else
             @foreach (var message in Messages)
             {
                 <tr>
-                    <td>@message.ReceiveTime.ToShortDateString()</td>
+                    <td>@message.ReceiveTime.Day.@message.ReceiveTime.Month.@message.ReceiveTime.Year.ToString().TrimStart('2').TrimStart('0')
+                    @message.ReceiveTime.Hour.ToString("D2"):@message.ReceiveTime.Minute.ToString("D2")</td>
                     <td>@message.Subject</td>
                     <td>@message.Sender</td>
                 </tr>

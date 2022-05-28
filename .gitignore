@@ -9,9 +9,11 @@
 # ignore emails
 *.eml
 
-# ignore files that might contain passwords, sensitive information etc.
+# ignore config files that might contain passwords, sensitive information etc.
 *.account
 *.ini
+config.json
+
 
 *.db*
 *.swp

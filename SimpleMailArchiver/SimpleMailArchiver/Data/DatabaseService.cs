@@ -9,44 +9,39 @@ namespace SimpleMailArchiver.Data
         public static void Initialize(IServiceProvider serviceProvider)
         {
 
-            using (var context = new ArchiveContext(
-                serviceProvider.GetRequiredService<
-                    DbContextOptions<ArchiveContext>>()))
+            using ArchiveContext? context = new ArchiveContext(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
+            context.Database.EnsureCreated();
+
+            /*
+            if (!context.MailMessages.Any())
             {
-                context.Database.EnsureCreated();
-                // Look for any movies.
-                if (!context.MailMessages.Any())
-                {
 
 
-                    context.MailMessages.AddRange(
-                        new MailMessage
-                        {
-                            Subject = "Test 1",
-                            Sender = "Person 1",
-                            ReceiveTime = DateTime.Now,
-                        },
+                context.MailMessages.AddRange(
+                    new MailMessage
+                    {
+                        Subject = "Test 1",
+                        Sender = "Person 1",
+                        ReceiveTime = DateTime.Now,
+                    },
 
-                        new MailMessage
-                        {
-                            Subject = "Test 2",
-                            Sender = "Person 2",
-                            ReceiveTime = DateTime.Now,
-                        },
+                    new MailMessage
+                    {
+                        Subject = "Test 2",
+                        Sender = "Person 2",
+                        ReceiveTime = DateTime.Now,
+                    },
 
-                        new MailMessage
-                        {
-                            Subject = "Test 3",
-                            Sender = "Person 3",
-                            ReceiveTime = DateTime.Now,
-                        }
-                    );
-                }
-
-                context.SaveChanges();
-                //context.Devices.Where(x => x.Name == "Küche").FirstOrDefault().Images = context.Images.ToList();
-                context.SaveChanges();
+                    new MailMessage
+                    {
+                        Subject = "Test 3",
+                        Sender = "Person 3",
+                        ReceiveTime = DateTime.Now,
+                    }
+                );
             }
+            */
+            context.SaveChanges();
         }
     }
 }

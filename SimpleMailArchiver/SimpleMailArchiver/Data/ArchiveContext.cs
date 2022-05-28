@@ -7,9 +7,9 @@ namespace SimpleMailArchiver.Data
 {
 	public partial class ArchiveContext : DbContext
     {
-        /*public signageContext()
+        public ArchiveContext()
         {
-        }*/
+        }
 
         public ArchiveContext(DbContextOptions<ArchiveContext> options)
             : base(options)

@@ -1,0 +1,90 @@
+﻿@page "/import-folder"
+
+<PageTitle>Import mail from local folder</PageTitle>
+
+@using SimpleMailArchiver.Data;
+@using MimeKit;
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ArchiveContext> DbFactory;
+
+
+<h1>Import mail from folder on server</h1>
+
+<p>This will import emails from a folder with .eml files mounted to the @Program.Config.ImportBasePath in the docker container.</p>
+
+<p>Root folder name for the import in archive: <input id="rootimportpath" @bind-value="rootimportpath"></p>
+<p>The path the root folder in the archive the import folder will be mapped to.</p>
+<p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@importRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
+</p>
+
+<p role="status">@infoMessage</p>
+<table class="table-responsive">
+    <tr>
+        <td>Current Folder</td>
+        <td style="padding-left: 10px !important">@progress?.CurrentFolder</td>
+    </tr>
+    <tr>
+        <td>Processed messages</td>
+        <td style="padding-left: 10px !important">@progress?.ParsedMessageCount</td>
+    </tr>
+    <tr>
+        <td>Imported messages</td>
+        <td style="padding-left: 10px !important">@progress?.ImportedMessageCount</td>
+    </tr>
+</table>
+
+@code {
+    private bool importRunning = false;
+    private CancellationTokenSource ctSource;
+    private string infoMessage;
+
+    private ImportProgress progress = new();
+
+    private void Cancel() => ctSource?.Cancel();
+    private string rootimportpath = "inbox/";
+
+    private async Task ImportFolder()
+    {
+        progress = new();
+        var emlPaths = System.IO.Directory.GetFiles(Program.Config.ImportBasePath, "*.eml", SearchOption.AllDirectories);
+
+        if (emlPaths.Length == 0)
+        {
+            infoMessage = $"No .eml files found for import in {Program.Config.ImportBasePath}";
+            return;
+        }
+
+        progress.TotalMessageCount = emlPaths.Length;
+
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            infoMessage = "Import running, please wait...";
+
+            var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, progress);
+
+            while (!mailTask.IsCompleted)
+            {
+                await InvokeAsync(StateHasChanged);
+                Thread.Sleep(1000);
+            }
+
+            infoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+        }
+        catch (OperationCanceledException)
+        {
+            infoMessage = "Import was cancelled.";
+        }
+        finally
+        {
+            importRunning = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}
+

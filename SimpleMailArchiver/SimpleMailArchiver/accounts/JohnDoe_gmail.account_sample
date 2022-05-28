@@ -1,0 +1,7 @@
+{
+  "Username": "john.doe@gmail_sample.com",
+  "Password": "VerySecretPassword",
+  "ImapUrl": "imap.gmail.com",
+  "AccountDisplayName": "John Doe E-Mail",
+  "FoldersToIgnore": [ "Trash", "Spam", "Junk" ]
+}

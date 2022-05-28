@@ -1,0 +1,5 @@
+{
+    "ArchiveBasePath":"/Path/To/Where/Mails/Get/Saved/",
+    "ImportBasePath":"/Path/Where/eml/files/for/import/are",
+    "AccountConfigsPath":"/path/where/account/config/files/are"
+}
