@@ -23,6 +23,9 @@ namespace SimpleMailArchiver.Data
         public string Folder { get; set; }
         public string Message { get; set; }
 
+        [NotMapped]
+        public string EmlPath => (Program.Config.ArchiveBasePath + "/" + Folder + "/" + Hash + ".eml").Replace("//", "/");
+
         public MailMessage() { }
 
         public MailMessage(MimeMessage mimeMessage!!, string folder)
@@ -36,12 +39,9 @@ namespace SimpleMailArchiver.Data
             ReceiveTime = mimeMessage.Date;
 
             // generate list of attachment filenames.
-            List<String> attachment_names = new();
+            List<string> attachment_names = new();
             foreach (MimeEntity attachment in mimeMessage.Attachments)
-            {
-                string fileName = attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name;
-                attachment_names.Add(fileName);
-            }
+                attachment_names.Add(attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name);
 
             Attachments = JsonSerializer.Serialize(attachment_names);
             Folder = folder;
@@ -49,4 +49,3 @@ namespace SimpleMailArchiver.Data
         }
     }
 }
-

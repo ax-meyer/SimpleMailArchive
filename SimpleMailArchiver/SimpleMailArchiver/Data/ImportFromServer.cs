@@ -44,8 +44,23 @@ namespace SimpleMailArchiver.Data
                         var headerMsg = new MailMessage(hmsg, folder.ToString());
                         progress.ParsedMessageCount++;
 
-                        if (context.MailMessages.Any(o => o.Hash == headerMsg.Hash))
+                        // check if message is already in archive
+                        var existingMsg = context.MailMessages.FirstOrDefault(msg => msg.Hash == headerMsg.Hash);
+                        if (existingMsg != null)
+                        {
+                            // check if message is now in different folder on the server
+                            // if yes, move in archive
+                            if (existingMsg.Folder != folder.ToString())
+                            {
+                                var oldEmlPath = existingMsg.EmlPath;
+                                existingMsg.Folder = folder.ToString();
+                                var newEmlPath = existingMsg.EmlPath;
+                                var dirName = Path.GetDirectoryName(newEmlPath);
+                                Directory.CreateDirectory(dirName);
+                                File.Move(oldEmlPath, newEmlPath);
+                            }
                             continue;
+                        }
 
                         using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct);
                         msg.Date = (DateTimeOffset)messageSummary.InternalDate;
