@@ -11,6 +11,7 @@ public record struct Account
     private string password;
     private string imapUrl;
     private int iD;
+    private int deleteAfterDays;
     private bool accountReadonly;
     private List<string> foldersToIgnore;
 
@@ -28,7 +29,7 @@ public record struct Account
             foldersToIgnore = value;
         }
     }
-
+    
     [JsonIgnore]
     public ReadOnlyCollection<string> IgnoreFolders => foldersToIgnore.AsReadOnly();
 
@@ -72,6 +73,17 @@ public record struct Account
             if (accountReadonly)
                 throw new Exception("Account cannot be modified after loading.");
             imapUrl = value;
+        }
+    }
+
+    public int DeleteAfterDays
+    {
+        get => deleteAfterDays;
+        set
+        {
+            if (accountReadonly)
+                throw new Exception("Account cannot be modified after loading.");
+            deleteAfterDays = value;
         }
     }
 

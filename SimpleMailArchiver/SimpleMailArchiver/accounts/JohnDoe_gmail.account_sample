@@ -3,5 +3,6 @@
   "Password": "VerySecretPassword",
   "ImapUrl": "imap.gmail.com",
   "AccountDisplayName": "John Doe E-Mail",
-  "FoldersToIgnore": [ "Trash", "Spam", "Junk" ]
+  "FoldersToIgnore": [ "Trash", "Spam", "Junk" ],
+  "DeleteAfterDays": 730
 }

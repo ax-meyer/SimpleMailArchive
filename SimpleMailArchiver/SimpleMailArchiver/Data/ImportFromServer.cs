@@ -29,9 +29,10 @@ namespace SimpleMailArchiver.Data
 
                     progress.CurrentFolder = folder.ToString();
 
-                    var folderAccess = await folder.OpenAsync(FolderAccess.ReadOnly, progress.Ct);
+                    var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct);
                     var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct);
                     var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct);
+                    var messageToDeleteIds = new List<UniqueId>();
 
                     foreach (var messageSummary in messageSummaries)
                     {
@@ -43,6 +44,11 @@ namespace SimpleMailArchiver.Data
                         };
                         var headerMsg = new MailMessage(hmsg, folder.ToString());
                         progress.ParsedMessageCount++;
+
+                        // mark message to be deleted if meets the deletion date.
+                        // delete will only be executed if whole folder is processed successfully.
+                        if (account.DeleteAfterDays > 0 && Math.Abs((headerMsg.ReceiveTime.DateTime - DateTime.Now).TotalDays) > account.DeleteAfterDays)
+                            messageToDeleteIds.Add(messageSummary.UniqueId);
 
                         // check if message is already in archive
                         var existingMsg = context.MailMessages.FirstOrDefault(msg => msg.Hash == headerMsg.Hash);
@@ -76,6 +82,14 @@ namespace SimpleMailArchiver.Data
                         await addDbTask;
                         await WriteToDiskTask;
                         progress.ImportedMessageCount++;
+                    }
+
+                    // delete messages marked for deletion.
+                    if (messageToDeleteIds.Count > 0)
+                    {
+                        //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
+                        //await folder.ExpungeAsync(progress.Ct);
+                        int c = 5;
                     }
                 }
             }
