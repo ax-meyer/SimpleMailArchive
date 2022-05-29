@@ -1,4 +1,5 @@
 ﻿using MimeKit;
+using Microsoft.EntityFrameworkCore;
 
 namespace SimpleMailArchiver.Data;
 
@@ -6,7 +7,7 @@ public static partial class ImportMessages
 {
     public static async Task ImportFromFolder(string[] emlPaths, string importFolderRoot, ImportProgress progress)
 	{
-        using var context = Program.ContextFactory.CreateDbContext();
+        using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct);
 
         var basepath_uri = new Uri(importFolderRoot);
         try
@@ -19,10 +20,10 @@ public static partial class ImportMessages
                 progress.CurrentFolder = Path.GetDirectoryName(basepath_uri.MakeRelativeUri(new Uri(file)).OriginalString);
 
                 using var msg = MimeMessage.Load(file);
-                var mmsg = new MailMessage(msg, progress.CurrentFolder);
+                var mmsg = await MailMessage.Construct(msg, progress.CurrentFolder, progress.Ct);
                 progress.ParsedMessageCount++;
 
-                if (context.MailMessages.Any(o => o.Hash == mmsg.Hash))
+                if (await context.MailMessages.AnyAsync(o => o.Hash == mmsg.Hash, progress.Ct))
                     continue;
 
                 progress.Ct.ThrowIfCancellationRequested();
@@ -36,7 +37,7 @@ public static partial class ImportMessages
         }
         finally
         {
-            context.SaveChanges();
+            await context.SaveChangesAsync();
         }
     }
 }

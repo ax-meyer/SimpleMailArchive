@@ -7,18 +7,7 @@ namespace SimpleMailArchiver.Data
 {
 	public class ParseMailMessage
 	{
-		public static void ParseMailMesesageToStorage(MimeKit.MimeMessage message!!, string folder)
-		{
-            using ArchiveContext? context = Program.ContextFactory.CreateDbContext();
-            MailMessage mailMessage = new(message, folder);
-            if (context.MailMessages.Any(o => o.Hash == mailMessage.Hash)) { throw new DuplicateMessageException(); }
-
-            context.Add(mailMessage);
-            message.WriteTo(MailSavePath(mailMessage));
-            context.SaveChanges();
-        }
-
-		public static string CreateMailHash(MimeMessage message!!)
+		public static async Task<string> CreateMailHash(MimeMessage message!!, CancellationToken token = default)
         {
             var strData = message.Date.ToString();
             strData += message.Subject;
@@ -31,10 +20,10 @@ namespace SimpleMailArchiver.Data
             using SHA512? alg = SHA512.Create();
             string hex = "";
 
-            var hashValue = alg.ComputeHash(encodedMessage);
+            var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token);
             foreach (byte x in hashValue)
             {
-                hex += String.Format("{0:x2}", x);
+                hex += string.Format("{0:x2}", x);
             }
             return hex;
         }

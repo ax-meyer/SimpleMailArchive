@@ -8,11 +8,11 @@
 @using MailKit.Security;
 @using MailKit.Net.Imap;
 @using MimeKit;
-@using Microsoft.EntityFrameworkCore
 
 <h1>Import from mailserver</h1>
 
-<p>Select account: 
+<p>
+    Select account:
     <select @bind="selectedAccountID">
         @foreach (var acc in Program.Config.Accounts)
         {
@@ -66,7 +66,6 @@
         try
         {
             infoMessage = "Import running, please wait...";
-
             var mailTask = ImportMessages.ImportFromServer(selectedAccountID, progress);
 
             while (!mailTask.IsCompleted)

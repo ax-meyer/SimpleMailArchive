@@ -1,10 +1,24 @@
-﻿@page "/"
+﻿@using Microsoft.EntityFrameworkCore;
 
-<PageTitle>Index</PageTitle>
+@page "/"
 
-<h1>Hello, world!</h1>
+<PageTitle>SimpleMailArchive</PageTitle>
 
-Welcome to your new app.
+<h1>SimpleMailArchive</h1>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+The archive currently contains @numMessages messages.
+
+@code {
+    private int numMessages;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitializedAsync();
+        var context = await Program.ContextFactory.CreateDbContextAsync();
+        numMessages = await context.MailMessages.CountAsync();
+        StateHasChanged();
+    }
+}
+
+
 

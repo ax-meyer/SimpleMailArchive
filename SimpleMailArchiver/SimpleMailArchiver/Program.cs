@@ -26,6 +26,8 @@ namespace SimpleMailArchiver
             builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
             builder.Services.AddSingleton<DatabaseService>();
 
+            builder.Services.AddLocalization();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -46,12 +48,11 @@ namespace SimpleMailArchiver
 
             app.UseRouting();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
-
             app.MapControllers();
             app.MapBlazorHub();
             app.MapFallbackToPage("/_Host");
+
+            app.UseRequestLocalization(builder.Configuration.GetValue<string>("Localization"));
 
             DatabaseService.Initialize(app.Services);
             ContextFactory = app.Services.GetService<IDbContextFactory<ArchiveContext>>()!;

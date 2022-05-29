@@ -3,14 +3,26 @@
 <PageTitle>Mail Archive</PageTitle>
 
 @using SimpleMailArchiver.Data
-@using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<ArchiveContext> DbFactory;
+@using Microsoft.EntityFrameworkCore;
 
 <h1>Mail Archive</h1>
 
-<p>This component demonstrates fetching data from a service.</p>
+<p>
+    Folder:
+    <select @bind="selectedFolder">
+        @foreach (var folder in filterFolders)
+        {
+            <option value="@folder">@folder</option>
+        }
+    </select>
+</p>
 
-@if (Messages == null)
+<p>
+    Search:
+    <input @bind="filterString" placeholder="Type to search..."/>
+</p>
+
+@if (messages == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -19,32 +31,106 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Subject</th>
-                <th>Sender</th>
+                @foreach (var header in Enum.GetValues(typeof(TableHeader)))
+                {
+                    <th @onclick="@(e => sortTable((TableHeader)header))">@header</th>
+                }
             </tr>
         </thead>
         <tbody>
-            @foreach (var message in Messages)
-            {
+            <Virtualize Items="@messages" Context="message">
                 <tr>
-                    <td>@message.ReceiveTime.Day.@message.ReceiveTime.Month.@message.ReceiveTime.Year.ToString().TrimStart('2').TrimStart('0')
-                    @message.ReceiveTime.Hour.ToString("D2"):@message.ReceiveTime.Minute.ToString("D2")</td>
-                    <td>@message.Subject</td>
-                    <td>@message.Sender</td>
+                    @foreach (var header in Enum.GetValues(typeof(TableHeader)))
+                        {
+                            <td>@message.GetType().GetProperty(header.ToString())?.GetValue(message)</td>
+                        }
                 </tr>
-            }
+            </Virtualize>
         </tbody>
     </table>
 }
 
 @code {
-    private List<MailMessage>? Messages { get; set; }
-
-    protected override void OnInitialized()
+    private List<MailMessage>? messages { get; set; } = null;
+    private TableHeader headerToSortBy = TableHeader.Date;
+    private List<string> filterFolders = new() { "All" };
+    private string _selectedFolder = "All";
+    private bool sortAscending = false;
+    private string _filterString = "";
+    private string selectedFolder
     {
-        using var context = DbFactory.CreateDbContext();
-        Messages = context.MailMessages.ToList();
+        get => _selectedFolder;
+        set
+        {
+            _selectedFolder = value;
+            searchEvent?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    private string filterString
+    {
+        get => _filterString;
+        set
+        {
+            _filterString = value;
+            searchEvent?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    private event EventHandler searchEvent;
+
+
+    enum TableHeader
+    {
+        Date,
+        Subject,
+        Sender,
+        Recipient,
+        Folder
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        using var context = await Program.ContextFactory.CreateDbContextAsync();
+        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
+        await GetMessgesAsync();
+        searchEvent += async (sender, e) => await GetMessgesAsync();
+    }
+
+    private async Task sortTable(TableHeader header)
+    {
+        if (headerToSortBy == header)
+            sortAscending = !sortAscending;
+        else
+            headerToSortBy = header;
+        await GetMessgesAsync();
+    }
+
+    private async Task GetMessgesAsync()
+    {
+        messages = null;
+        StateHasChanged();
+        using var context = await Program.ContextFactory.CreateDbContextAsync();
+        var msgs = context.MailMessages.AsQueryable();
+        if (selectedFolder != "All")
+            msgs = msgs.Where(m => m.Folder == selectedFolder);
+        if (filterString.Trim() != string.Empty)
+            msgs = msgs.Where(m =>
+            m.Subject.Contains(filterString) ||
+            m.Sender.Contains(filterString) ||
+            m.Recipient.Contains(filterString) ||
+            m.CC_recipient.Contains(filterString) ||
+            m.BCC_recipient.Contains(filterString) ||
+            m.Date.ToString().Contains(filterString) ||
+            m.Attachments.Contains(filterString) ||
+            m.Folder.Contains(filterString) ||
+            m.Message.Contains(filterString));
+
+        messages = await msgs.OrderBy(headerToSortBy.ToString(), sortAscending).ToListAsync();
+        StateHasChanged();
     }
 }
 

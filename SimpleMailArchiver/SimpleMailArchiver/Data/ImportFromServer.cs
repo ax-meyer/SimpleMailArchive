@@ -3,6 +3,7 @@ using MailKit.Net.Imap;
 using MailKit.Search;
 using MailKit.Security;
 using MimeKit;
+using Microsoft.EntityFrameworkCore;
 
 namespace SimpleMailArchiver.Data
 {
@@ -18,7 +19,6 @@ namespace SimpleMailArchiver.Data
             using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct);
 
             var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct);
-
             try
             {
                 foreach (var folder in folders)
@@ -42,16 +42,16 @@ namespace SimpleMailArchiver.Data
                         {
                             Date = (DateTimeOffset)messageSummary.InternalDate
                         };
-                        var headerMsg = new MailMessage(hmsg, folder.ToString());
+                        var headerMsg = await MailMessage.Construct(hmsg, folder.ToString(), progress.Ct);
                         progress.ParsedMessageCount++;
 
                         // mark message to be deleted if meets the deletion date.
                         // delete will only be executed if whole folder is processed successfully.
-                        if (account.DeleteAfterDays > 0 && Math.Abs((headerMsg.ReceiveTime.DateTime - DateTime.Now).TotalDays) > account.DeleteAfterDays)
+                        if (account.DeleteAfterDays > 0 && Math.Abs((headerMsg.Date - DateTime.Now).TotalDays) > account.DeleteAfterDays)
                             messageToDeleteIds.Add(messageSummary.UniqueId);
 
                         // check if message is already in archive
-                        var existingMsg = context.MailMessages.FirstOrDefault(msg => msg.Hash == headerMsg.Hash);
+                        var existingMsg = await context.MailMessages.FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, progress.Ct);
                         if (existingMsg != null)
                         {
                             // check if message is now in different folder on the server
@@ -67,12 +67,10 @@ namespace SimpleMailArchiver.Data
                             }
                             continue;
                         }
-
+                                      
                         using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct);
                         msg.Date = (DateTimeOffset)messageSummary.InternalDate;
-                        var mmsg = new MailMessage(msg, folder.ToString());
-                        if (headerMsg.Hash != mmsg.Hash)
-                            throw new InvalidDataException("hash mismatch");
+                        var mmsg = await MailMessage.Construct(msg, folder.ToString(), progress.Ct);
 
                         progress.Ct.ThrowIfCancellationRequested();
 
@@ -89,7 +87,6 @@ namespace SimpleMailArchiver.Data
                     {
                         //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
                         //await folder.ExpungeAsync(progress.Ct);
-                        int c = 5;
                     }
                 }
             }
