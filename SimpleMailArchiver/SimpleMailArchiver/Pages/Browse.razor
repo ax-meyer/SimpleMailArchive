@@ -1,11 +1,14 @@
-﻿@page "/browse"
+﻿@page "/"
+@page "/browse"
 
 <PageTitle>Mail Archive</PageTitle>
 
 @using SimpleMailArchiver.Data
 @using Microsoft.EntityFrameworkCore;
+@using System.Text.Json;
 
 <h1>Mail Archive</h1>
+<p>Total number of messages: @totalNumMessages</p>
 
 <p>
     Folder:
@@ -19,7 +22,7 @@
 
 <p>
     Search:
-    <input @bind="filterString" placeholder="Type to search..."/>
+    <input @bind="filterString" placeholder="Type to search..." />
 </p>
 
 @if (messages == null)
@@ -33,16 +36,40 @@ else
             <tr>
                 @foreach (var header in Enum.GetValues(typeof(TableHeader)))
                 {
-                    <th @onclick="@(e => sortTable((TableHeader)header))">@header</th>
+                    if (((TableHeader)header) == TableHeader.Attachments)
+                    {
+                        <th @onclick="@(e => sortTable((TableHeader)header))">&#x1F4CE;</th>
+ // paperclip symbol
+                    }
+                    else
+                    {
+                        <th @onclick="@(e => sortTable((TableHeader)header))">@header.ToString()</th>
+                    }
                 }
             </tr>
         </thead>
         <tbody>
             <Virtualize Items="@messages" Context="message">
-                <tr>
+                <tr @onclick="() => DisplayMessage(message)">
                     @foreach (var header in Enum.GetValues(typeof(TableHeader)))
                         {
+                            if (((TableHeader)header) == TableHeader.Attachments)
+                            {
+                                var attachments = JsonSerializer.Deserialize<string[]>(message.Attachments);
+                                var hasAttachments = attachments?.Length > 0;
+                                if (hasAttachments)
+                                {
+                                <td>&check; (@attachments?.Length)</td>
+                                }
+                                else
+                                {
+                                <td>&cross;</td>
+                                }
+                            }
+                            else
+                            {
                             <td>@message.GetType().GetProperty(header.ToString())?.GetValue(message)</td>
+                            }
                         }
                 </tr>
             </Virtualize>
@@ -50,8 +77,16 @@ else
     </table>
 }
 
+@if (showMessage)
+{
+    <DisplayMail Message="@selectedMessage" OnClose="@DisplayMailClosing" />
+}
+
 @code {
-    private List<MailMessage>? messages { get; set; } = null;
+    private int totalNumMessages = 0;
+    private MailMessage[] messages { get; set; } = null;
+    private MailMessage selectedMessage;
+    private bool showMessage = false;
     private TableHeader headerToSortBy = TableHeader.Date;
     private List<string> filterFolders = new() { "All" };
     private string _selectedFolder = "All";
@@ -86,7 +121,8 @@ else
         Subject,
         Sender,
         Recipient,
-        Folder
+        Folder,
+        Attachments
     }
 
 
@@ -127,10 +163,19 @@ else
             m.Date.ToString().Contains(filterString) ||
             m.Attachments.Contains(filterString) ||
             m.Folder.Contains(filterString) ||
-            m.Message.Contains(filterString));
+            m.TextBody.Contains(filterString));
 
-        messages = await msgs.OrderBy(headerToSortBy.ToString(), sortAscending).ToListAsync();
+        messages =  await msgs.OrderBy(headerToSortBy.ToString(), sortAscending).ToArrayAsync();
+        totalNumMessages = messages.Length;
         StateHasChanged();
     }
+
+    private void DisplayMessage(MailMessage message!!)
+    {
+        selectedMessage = message;
+        showMessage = true;
+    }
+
+    private void DisplayMailClosing() => showMessage = false;
 }
 

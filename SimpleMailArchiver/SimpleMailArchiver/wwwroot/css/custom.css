@@ -1,0 +1,24 @@
+﻿table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+table td {
+    word-wrap: break-word; /* All browsers since IE 5.5+ */
+    overflow-wrap: break-word; /* Renamed property in CSS3 draft spec */
+}
+
+body .modal-dialog { /* Width */
+    max-width: 90%;
+    width: auto !important;
+    display: inline-block;
+}
+
+.modal {
+    display: flex !important;
+    justify-content: center;
+}
+
+.modal-open .modal {
+
+}

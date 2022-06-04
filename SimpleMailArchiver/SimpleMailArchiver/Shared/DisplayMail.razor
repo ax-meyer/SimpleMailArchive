@@ -1,0 +1,78 @@
+﻿@using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Pages;
+@using Microsoft.EntityFrameworkCore;
+@using System.IO;
+@using System;
+@using Microsoft.AspNetCore.Hosting;
+@using System.Text.Json;
+@inject IJSRuntime JSRuntime;
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
+     aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">@Message.Subject</h4>
+                <button type="button" class="close" @onclick="Download">Download</button>
+                <button type="button" class="close" @onclick="ModalCancel">Cancel</button>
+            </div>
+            <div class="modal-body">
+                <table class="table-responsive">
+                    <tr>
+                        <td>From</td>
+                        <td>@Message.Sender</td>
+                    </tr>
+                    <tr>
+                        <td>To</td>
+                        <td>@Message.Recipient</td>
+                    </tr>
+                    <tr>
+                        <td>CC</td>
+                        <td>@Message.CC_recipient</td>
+                    </tr>
+                    <tr>
+                        <td>BCC</td>
+                        <td>@Message.BCC_recipient</td>
+                    </tr>
+                    <tr>
+                        <td>Attachments:</td>
+                        <td>
+                            @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments))
+                            {
+                                @attachment <br />
+                            }
+                        </td>
+                    </tr>
+                </table>
+                <br /><br />
+                @if (Message.HtmlBody != null)
+                {
+                    @((MarkupString)Message.HtmlBody)
+                }
+                @if (Message.TextBody != null)
+                {
+                    @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public MailMessage Message { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+    private Task ModalCancel() => OnClose.InvokeAsync(false);
+
+    private async Task Download()
+    {
+        await FileDownloadsModel.PrepareMessageForDownload(Message);
+        await JSRuntime.InvokeAsync<object>("open", "download", "_blank");
+    }
+
+    protected override void OnInitialized()
+    {
+    }
+}

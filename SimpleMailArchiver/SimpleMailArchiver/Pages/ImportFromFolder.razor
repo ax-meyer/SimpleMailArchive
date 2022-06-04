@@ -3,6 +3,7 @@
 <PageTitle>Import mail from local folder</PageTitle>
 
 @using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Shared;
 @using MimeKit;
 
 <h1>Import mail from folder on server</h1>
@@ -14,56 +15,60 @@
 <p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
 
 <p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@importRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@Program.ImportRunning">Import from folder</button>
     <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
 </p>
 
-<p role="status">@infoMessage</p>
+<p role="status">@Program.ImportProgress.InfoMessage</p>
 <table class="table-responsive">
     <tr>
         <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@progress?.CurrentFolder</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
     </tr>
     <tr>
         <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@progress?.ParsedMessageCount</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
     </tr>
     <tr>
         <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@progress?.ImportedMessageCount</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
     </tr>
 </table>
 
-@code {
-    private bool importRunning = false;
-    private CancellationTokenSource ctSource;
-    private string infoMessage;
+@if (Program.ImportRunning)
+{
+    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
+}
 
-    private ImportProgress progress = new();
+
+@code {
+    private CancellationTokenSource ctSource;
 
     private void Cancel() => ctSource?.Cancel();
     private string rootimportpath = "inbox/";
 
     private async Task ImportFolder()
     {
-        progress = new();
+        if (Program.ImportRunning)
+            return;
+        Program.ImportProgress = new();
         var emlPaths = System.IO.Directory.GetFiles(Program.Config.ImportBasePath, "*.eml", SearchOption.AllDirectories);
 
         if (emlPaths.Length == 0)
         {
-            infoMessage = $"No .eml files found for import in {Program.Config.ImportBasePath}";
+            Program.ImportProgress.InfoMessage = $"No .eml files found for import in {Program.Config.ImportBasePath}";
             return;
         }
 
-        progress.TotalMessageCount = emlPaths.Length;
+        Program.ImportProgress.TotalMessageCount = emlPaths.Length;
 
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            infoMessage = "Import running, please wait...";
+            Program.ImportProgress.InfoMessage = "Import running, please wait...";
 
-            var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, progress);
+            var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, Program.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
@@ -71,15 +76,15 @@
                 Thread.Sleep(1000);
             }
 
-            infoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
         }
         catch (OperationCanceledException)
         {
-            infoMessage = "Import was cancelled.";
+            Program.ImportProgress.InfoMessage = "Import was cancelled.";
         }
         finally
         {
-            importRunning = false;
+            Program.ImportRunning = false;
             await InvokeAsync(StateHasChanged);
         }
     }

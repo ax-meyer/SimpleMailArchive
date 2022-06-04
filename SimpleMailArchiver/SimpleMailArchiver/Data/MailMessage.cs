@@ -21,7 +21,8 @@ public partial class MailMessage
     public DateTime Date { get; set; }
     public string Attachments { get; set; }
     public string Folder { get; set; }
-    public string Message { get; set; }
+    public string TextBody { get; set; }
+    public string HtmlBody { get; set; }
 
     [NotMapped]
     public string EmlPath => (Program.Config.ArchiveBasePath + "/" + Folder + "/" + Hash + ".eml").Replace("//", "/");
@@ -46,7 +47,8 @@ public partial class MailMessage
             Date = mimeMessage.Date.DateTime,
             Attachments = JsonSerializer.Serialize(attachment_names),
             Folder = folder,
-            Message = mimeMessage.TextBody
+            TextBody = mimeMessage.TextBody,
+            HtmlBody = mimeMessage.HtmlBody
         };
     }
 }

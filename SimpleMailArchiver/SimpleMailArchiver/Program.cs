@@ -11,10 +11,17 @@ namespace SimpleMailArchiver
     {
         public static AppConfig Config { get; } = AppConfig.Load("config.json");
         public static IDbContextFactory<ArchiveContext> ContextFactory { get; private set; }
+        public static ImportProgress ImportProgress { get; set; } = new();
+        public static bool ImportRunning { get; set; } = false;
 
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            if (!Directory.Exists(Config.ArchiveBasePath))
+                Directory.CreateDirectory(Config.ArchiveBasePath);
+            if (!Directory.Exists(Config.DbPath))
+                Directory.CreateDirectory(Config.DbPath);
 
             // Add services to the container.
             string? connectionString = $"DataSource={Config.DbPath}/archive.db";

@@ -9,9 +9,11 @@ namespace SimpleMailArchiver.Data
 {
     public static partial class ImportMessages
 	{
-		public static async Task ImportFromServer(int accountId, ImportProgress progress)
+		public static async Task ImportFromServer(string accountFilename, ImportProgress progress)
         {
-            var account = Program.Config.Accounts.First(item => item.ID == accountId);
+            Program.ImportRunning = true;
+
+            var account = Program.Config.Accounts.First(item => item.AccountFilename == accountFilename);
 
             using var client = new ImapClient();
             await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct);
@@ -23,16 +25,22 @@ namespace SimpleMailArchiver.Data
             {
                 foreach (var folder in folders)
                 {
-                    if (account.IgnoreFolders.Contains(folder.ToString()))
+                    FolderOptions? folderOptions = account.FolderOptions.Where(f => f.Name == folder.FullName).FirstOrDefault();
+                    if (folderOptions != null && folderOptions.Exclude)
                         continue;
                     progress.Ct.ThrowIfCancellationRequested();
 
-                    progress.CurrentFolder = folder.ToString();
+                    progress.CurrentFolder = folder.FullName;
 
                     var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct);
                     var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct);
                     var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct);
                     var messageToDeleteIds = new List<UniqueId>();
+                    var messagesOnServer = new List<string>();
+
+                    int deleteAfterDays = account.DeleteAfterDays;
+                    if (folderOptions != null && folderOptions.DeleteAfterDays != null)
+                        deleteAfterDays = (int)folderOptions.DeleteAfterDays;
 
                     foreach (var messageSummary in messageSummaries)
                     {
@@ -47,8 +55,10 @@ namespace SimpleMailArchiver.Data
 
                         // mark message to be deleted if meets the deletion date.
                         // delete will only be executed if whole folder is processed successfully.
-                        if (account.DeleteAfterDays > 0 && Math.Abs((headerMsg.Date - DateTime.Now).TotalDays) > account.DeleteAfterDays)
+                        if (deleteAfterDays > 0 && Math.Abs((headerMsg.Date - DateTime.Now).TotalDays) > deleteAfterDays)
                             messageToDeleteIds.Add(messageSummary.UniqueId);
+                        else
+                            messagesOnServer.Add(headerMsg.Hash);
 
                         // check if message is already in archive
                         var existingMsg = await context.MailMessages.FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, progress.Ct);
@@ -59,7 +69,7 @@ namespace SimpleMailArchiver.Data
                             if (existingMsg.Folder != folder.ToString())
                             {
                                 var oldEmlPath = existingMsg.EmlPath;
-                                existingMsg.Folder = folder.ToString();
+                                existingMsg.Folder = folder.FullName;
                                 var newEmlPath = existingMsg.EmlPath;
                                 var dirName = Path.GetDirectoryName(newEmlPath);
                                 Directory.CreateDirectory(dirName);
@@ -87,12 +97,25 @@ namespace SimpleMailArchiver.Data
                     {
                         //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
                         //await folder.ExpungeAsync(progress.Ct);
+                        progress.RemoteMessagesDeletedCount += messageToDeleteIds.Count;
+                    }
+                    if (folderOptions != null && folderOptions.SyncServerFolder)
+                    {
+                        var msgsToDelete = context.MailMessages.Where(msg => !messagesOnServer.Any(onServer => msg.Hash == onServer) && msg.Folder == folder.FullName).ToArray();
+                        if (msgsToDelete != null && msgsToDelete.Length > 0)
+                        {
+                            foreach (var emlPath in msgsToDelete.Select(msg => msg.EmlPath))
+                                File.Delete(emlPath);
+                            context.MailMessages.RemoveRange(msgsToDelete);
+                            progress.LocalMessagesDeletedCount += msgsToDelete.Length;
+                        }
                     }
                 }
             }
             finally
             {
                 await context.SaveChangesAsync();
+                Program.ImportRunning = false;
             }
         }
 	}

@@ -3,6 +3,7 @@
 <PageTitle>Import mail from online account</PageTitle>
 
 @using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Shared;
 @using MailKit;
 @using MailKit.Search;
 @using MailKit.Security;
@@ -13,60 +14,70 @@
 
 <p>
     Select account:
-    <select @bind="selectedAccountID">
+    <select @bind="selectedAccountFilename">
         @foreach (var acc in Program.Config.Accounts)
         {
-            <option value="@acc.ID">@acc.AccountDisplayName</option>
+            <option value="@acc.AccountFilename">@acc.AccountDisplayName</option>
         }
     </select>
 </p>
 
 <p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@importRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@Program.ImportRunning">Import from selected account</button>
     <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
 </p>
 
-<p role="status">@infoMessage</p>
+<p role="status">@Program.ImportProgress.InfoMessage</p>
 <table class="table-responsive">
     <tr>
         <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@progress?.CurrentFolder</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
     </tr>
     <tr>
         <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@progress?.ParsedMessageCount</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
     </tr>
     <tr>
         <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@progress?.ImportedMessageCount</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
+    </tr>
+    <tr>
+        <td>Messages deleted on server</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.RemoteMessagesDeletedCount</td>
+    </tr>
+    <tr>
+        <td>Messages deleted locally</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.LocalMessagesDeletedCount</td>
     </tr>
 </table>
 
+@if (Program.ImportRunning)
+{
+    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
+}
 
 
 @code {
-    private int selectedAccountID;
-    private bool importRunning = false;
+    private string selectedAccountFilename;
     private CancellationTokenSource ctSource;
-    private string infoMessage;
-
-    private ImportProgress progress = new();
 
     private void Cancel() => ctSource?.Cancel();
 
     private async Task ImportFromAccount()
     {
-        progress = new();
+        if (Program.ImportRunning)
+            return;
+        Program.ImportProgress = new();
         ctSource = new CancellationTokenSource();
-        progress.Ct = ctSource.Token;
-        importRunning = true;
+        Program.ImportProgress.Ct = ctSource.Token;
+        Program.ImportRunning = true;
 
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            infoMessage = "Import running, please wait...";
-            var mailTask = ImportMessages.ImportFromServer(selectedAccountID, progress);
+            Program.ImportProgress.InfoMessage = "Import running, please wait...";
+            var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
@@ -74,19 +85,19 @@
                 Thread.Sleep(1000);
             }
 
-            infoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
         }
         catch (OperationCanceledException)
         {
-            infoMessage = "Import was cancelled.";
+            Program.ImportProgress.InfoMessage = "Import was cancelled.";
         }
         catch (InvalidDataException)
         {
-            infoMessage = "INTERNAL ERROR! Hash Mismatch";
+            Program.ImportProgress.InfoMessage = "INTERNAL ERROR! Hash Mismatch";
         }
         finally
         {
-            importRunning = false;
+            Program.ImportRunning = false;
             await InvokeAsync(StateHasChanged);
         }
     }

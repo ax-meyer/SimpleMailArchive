@@ -74,14 +74,13 @@ namespace SimpleMailArchiver.Data
             if (Directory.Exists(config.AccountConfigsPath))
             {
                 var files = Directory.GetFiles(config.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
-                int accCount = 0;
                 foreach (var file in files)
                 {
                     try
                     {
                         var acc = JsonSerializer.Deserialize<Account>(File.ReadAllText(file));
                         if (acc != null)
-                            acc.ID = accCount++;
+                            acc.AccountFilename = Path.GetFileName(file);
                         config.Accounts.Add(acc);
                     }
                     catch (JsonException)

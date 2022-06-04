@@ -4,98 +4,37 @@ using System.Text.Json.Serialization;
 namespace SimpleMailArchiver.Data;
 
 [Serializable]
-public record struct Account
+public class Account
 {
-    private string accountDisplayName;
-    private string username;
-    private string password;
-    private string imapUrl;
-    private int iD;
-    private int deleteAfterDays;
-    private bool accountReadonly;
-    private List<string> foldersToIgnore;
+    public List<FolderOptions> FolderOptions { get; set; } = new List<FolderOptions>();
 
-    public List<string> FoldersToIgnore {
-        get
-        {
-            if (accountReadonly)
-                throw new Exception("Use IgnoreFolders to get read-only access.");
-            return foldersToIgnore;
-        }
-        set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            foldersToIgnore = value;
-        }
-    }
+    public string AccountDisplayName { get; init; } = "AccountNameToDisplay";
     
-    [JsonIgnore]
-    public ReadOnlyCollection<string> IgnoreFolders => foldersToIgnore.AsReadOnly();
+    public string Username { get; init; } = "Username";
+    
+    public string Password { get; init; } = "SecretPassword";
+    
+    public string ImapUrl { get; init; } = "ImapServerURL";
 
-    public string AccountDisplayName
+    public int DeleteAfterDays { get; init; } = -1;
+
+
+    public Account()
     {
-        get => accountDisplayName;
-        set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            accountDisplayName = value;
-        }
     }
 
-    public string Username
-    {
-        get => username;
-        set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            username = value;
-        }
-    }
-
-    public string Password
-    {
-        get => password;
-        set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            password = value;
-        }
-    }
-
-    public string ImapUrl
-    {
-        get => imapUrl; set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            imapUrl = value;
-        }
-    }
-
-    public int DeleteAfterDays
-    {
-        get => deleteAfterDays;
-        set
-        {
-            if (accountReadonly)
-                throw new Exception("Account cannot be modified after loading.");
-            deleteAfterDays = value;
-        }
-    }
+    private bool accountReadonly = false;
+    private string accountFilename = "";
 
     [JsonIgnore]
-    public int ID
+    public string AccountFilename
     {
-        get => iD;
+        get => accountFilename;
         set
         {
             if (accountReadonly)
                 throw new Exception("Account cannot be modified after loading.");
-            iD = value;
+            accountFilename = value;
             accountReadonly = true;
         }
     }

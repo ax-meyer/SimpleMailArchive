@@ -1,4 +1,32 @@
 {
+  "FolderOptions": [
+    {
+      "Name": "Trash",
+      "Exclude": true,
+      "DeleteAfterDays": null,
+      "SyncServerFolder": false
+    },
+    {
+      "Name": "Junk",
+      "Exclude": true
+    },
+    {
+      "Name": "Drafts",
+      "Exclude": true
+    },
+    {
+      "Name": "SampleFolder/Subfolder",
+      "Exclude": false,
+      "DeleteAfterDays": null,
+      "SyncServerFolder": true
+    }
+    {
+      "Name": "INBOX",
+      "Exclude": false,
+      "DeleteAfterDays": null,
+      "SyncServerFolder": true
+    }
+  ],
   "Username": "john.doe@gmail_sample.com",
   "Password": "VerySecretPassword",
   "ImapUrl": "imap.gmail.com",

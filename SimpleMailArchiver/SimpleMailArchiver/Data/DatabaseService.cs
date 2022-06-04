@@ -9,7 +9,7 @@ namespace SimpleMailArchiver.Data
         public static void Initialize(IServiceProvider serviceProvider)
         {
 
-            using ArchiveContext? context = new ArchiveContext(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
+            using ArchiveContext? context = new(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
             context.Database.EnsureCreated();
 
             /*

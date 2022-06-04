@@ -38,7 +38,7 @@ namespace SimpleMailArchiver.Data
                 entity.Property(e => e.CC_recipient).HasColumnName("CC_RECIPIENT");
                 entity.Property(e => e.Folder).HasColumnName("FOLDER");
                 entity.Property(e => e.Hash).HasColumnName("HASH");
-                entity.Property(e => e.Message).HasColumnName("MESSAGE");
+                entity.Property(e => e.TextBody).HasColumnName("MESSAGE");
                 entity.Property(e => e.Date).HasColumnName("RECEIVE_TIME");
                 entity.Property(e => e.Sender).HasColumnName("SENDER");
                 entity.Property(e => e.Subject).HasColumnName("SUBJECT");

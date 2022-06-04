@@ -7,6 +7,8 @@ public static partial class ImportMessages
 {
     public static async Task ImportFromFolder(string[] emlPaths, string importFolderRoot, ImportProgress progress)
 	{
+        Program.ImportRunning = true;
+
         using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct);
 
         var basepath_uri = new Uri(importFolderRoot);
@@ -38,6 +40,7 @@ public static partial class ImportMessages
         finally
         {
             await context.SaveChangesAsync();
+            Program.ImportRunning = false;
         }
     }
 }
