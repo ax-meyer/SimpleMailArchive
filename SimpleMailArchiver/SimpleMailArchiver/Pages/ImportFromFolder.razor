@@ -51,7 +51,10 @@
     {
         if (Program.ImportRunning)
             return;
+
+        ctSource = new CancellationTokenSource();
         Program.ImportProgress = new();
+        Program.ImportProgress.Ct = ctSource.Token;
         var emlPaths = System.IO.Directory.GetFiles(Program.Config.ImportBasePath, "*.eml", SearchOption.AllDirectories);
 
         if (emlPaths.Length == 0)
@@ -76,7 +79,11 @@
                 Thread.Sleep(1000);
             }
 
-            Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            if (!Program.ImportProgress.Ct.IsCancellationRequested)
+                Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            else
+                Program.ImportProgress.InfoMessage = "Import was cancelled.";
+
         }
         catch (OperationCanceledException)
         {

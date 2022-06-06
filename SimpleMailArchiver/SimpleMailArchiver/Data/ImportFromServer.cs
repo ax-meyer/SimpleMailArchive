@@ -89,6 +89,7 @@ namespace SimpleMailArchiver.Data
                         var WriteToDiskTask = msg.WriteToAsync(ParseMailMessage.MailSavePath(mmsg));
                         await addDbTask;
                         await WriteToDiskTask;
+                        await context.SaveChangesAsync(progress.Ct);
                         progress.ImportedMessageCount++;
                     }
 
@@ -114,7 +115,7 @@ namespace SimpleMailArchiver.Data
             }
             finally
             {
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(progress.Ct);
                 Program.ImportRunning = false;
             }
         }

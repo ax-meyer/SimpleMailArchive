@@ -58,7 +58,7 @@
 
 
 @code {
-    private string selectedAccountFilename;
+    private string selectedAccountFilename = Program.Config.Accounts.FirstOrDefault()?.AccountFilename;
     private CancellationTokenSource ctSource;
 
     private void Cancel() => ctSource?.Cancel();
@@ -77,6 +77,9 @@
         try
         {
             Program.ImportProgress.InfoMessage = "Import running, please wait...";
+            if (selectedAccountFilename == null)
+                throw new ArgumentException("No valid account selected.");
+
             var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
 
             while (!mailTask.IsCompleted)
@@ -85,7 +88,10 @@
                 Thread.Sleep(1000);
             }
 
-            Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            if (!Program.ImportProgress.Ct.IsCancellationRequested)
+                Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            else
+                Program.ImportProgress.InfoMessage = "Import was cancelled.";
         }
         catch (OperationCanceledException)
         {
@@ -94,6 +100,14 @@
         catch (InvalidDataException)
         {
             Program.ImportProgress.InfoMessage = "INTERNAL ERROR! Hash Mismatch";
+        }
+        catch (ArgumentException ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Unexpected Error: {ex.Message}";
         }
         finally
         {

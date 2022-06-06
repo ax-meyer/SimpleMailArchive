@@ -33,8 +33,23 @@ public partial class MailMessage
     {
         // generate list of attachment filenames
         List<string> attachment_names = new();
-        foreach (MimeEntity attachment in mimeMessage.Attachments)
-            attachment_names.Add(attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name);
+        attachment_names.AddRange(mimeMessage.Attachments.Select(attachment => attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
+        
+        foreach (var part in mimeMessage.BodyParts)
+        {
+            if (part.ContentDisposition != null && part.ContentDisposition.FileName != null)
+            {
+                var name = part.ContentDisposition.FileName;
+                if (!attachment_names.Contains(name))
+                    attachment_names.Add(name);
+            }
+            else if (part.ContentType != null && part.ContentType.Name != null)
+            {
+                var name = part.ContentType.Name;
+                if (!attachment_names.Contains(name))
+                    attachment_names.Add(part.ContentType.Name);
+            }
+        }
 
         return new MailMessage()
         {

@@ -34,12 +34,13 @@ public static partial class ImportMessages
                 var fileTask = msg.WriteToAsync(ParseMailMessage.MailSavePath(mmsg));
                 await dbTask;
                 await fileTask;
+                await context.SaveChangesAsync(progress.Ct);
                 progress.ImportedMessageCount++;
             }
         }
         finally
         {
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(progress.Ct);
             Program.ImportRunning = false;
         }
     }
