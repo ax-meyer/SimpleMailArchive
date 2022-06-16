@@ -14,22 +14,22 @@ public class Account
     /// <summary>
     /// Name of the account to display in the GUI.
     /// </summary>
-    public string AccountDisplayName { get; init; } = "AccountNameToDisplay";
+    public string AccountDisplayName { get; init; } = "";
 
     /// <summary>
     /// Username for login
     /// </summary>
-    public string Username { get; init; } = "Username";
+    public string Username { get; init; } = "";
 
     /// <summary>
     /// Password for login
     /// </summary>
-    public string Password { get; init; } = "SecretPassword";
+    public string Password { get; init; } = "";
 
     /// <summary>
     /// URL to IMAP server
     /// </summary>
-    public string ImapUrl { get; init; } = "ImapServerURL";
+    public string ImapUrl { get; init; } = "";
 
     /// <summary>
     /// Messages will be deleted on the server after this amount of days.
@@ -39,9 +39,10 @@ public class Account
     public int DeleteAfterDays { get; init; } = -1;
 
     /// <summary>
-    /// Base bath in the archive for this account.
+    /// Base bath in the archive for this account. With this option, emails from multiple accounts can be separated.
+    /// CAREFUL: This is just a separation in the folder structure - all emails will still be accessible through the webiste, at the moment there is no way to use a single instance for multiple users who shall not see all emails in the archive.
     /// </summary>
-    public string BasePathInArchive { get; init; }
+    public string BasePathInArchive { get; init; } = "";
 
 
     public Account()
