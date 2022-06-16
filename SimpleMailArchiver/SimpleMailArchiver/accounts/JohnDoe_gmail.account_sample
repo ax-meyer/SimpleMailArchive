@@ -2,29 +2,13 @@
   "FolderOptions": [
     {
       "Name": "Trash",
-      "Exclude": true,
-      "DeleteAfterDays": null,
-      "SyncServerFolder": false
-    },
-    {
-      "Name": "Junk",
-      "Exclude": true
-    },
-    {
-      "Name": "Drafts",
       "Exclude": true
     },
     {
       "Name": "SampleFolder/Subfolder",
-      "Exclude": false,
-      "DeleteAfterDays": null,
-      "SyncServerFolder": true
-    }
-    {
-      "Name": "INBOX",
-      "Exclude": false,
-      "DeleteAfterDays": null,
-      "SyncServerFolder": true
+      "DeleteAfterDays": 180,
+      "SyncServerFolder": true,
+      "NameInArchive": "OtherSampleFolder/OtherSubfolder"
     }
   ],
   "Username": "john.doe@gmail_sample.com",
@@ -32,5 +16,6 @@
   "ImapUrl": "imap.gmail.com",
   "AccountDisplayName": "John Doe E-Mail",
   "FoldersToIgnore": [ "Trash", "Spam", "Junk" ],
-  "DeleteAfterDays": 730
+  "DeleteAfterDays": 730,
+  "BasePathInArchive": "johndoe_gmail/"
 }
