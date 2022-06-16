@@ -17,7 +17,7 @@
         using var client = new System.Net.Http.HttpClient();
         client.Timeout = System.TimeSpan.FromSeconds(10);
         string callBackUrl = "";
-        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("CallBackUrl", out var callback))
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("callBackUrl", out var callback))
         {
             callBackUrl = callback.ToString().Trim().TrimEnd('/');
             await client.GetAsync(callBackUrl + "/start");
