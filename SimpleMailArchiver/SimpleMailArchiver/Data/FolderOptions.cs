@@ -9,7 +9,7 @@ public class FolderOptions
     }
 
     /// <summary>
-    /// Name of the folder. Required.
+    /// Name of the folder on the server. Required.
     /// </summary>
     public string Name { get; init; } = "";
 
