@@ -1,0 +1,163 @@
+﻿@page "/"
+@page "/browse"
+
+<PageTitle>Mail Archive</PageTitle>
+
+@using SimpleMailArchiver.Data
+@using Microsoft.EntityFrameworkCore;
+@using System.Text.Json;
+
+@implements IAsyncDisposable
+
+<h1>Mail Archive</h1>
+
+<p>
+    Folder:
+    <select @bind="selectedFolder">
+        @foreach (var folder in filterFolders)
+        {
+            <option value="@folder">@folder</option>
+        }
+    </select>
+</p>
+
+<p>
+    Search:
+    <input @bind="filterString" placeholder="Type to search..." />
+</p>
+
+<p>Number of messages: @numMessages</p>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            @foreach (TableHeader header in Enum.GetValues(typeof(TableHeader)))
+            {
+                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => sortTable(header))">
+                    @if (header == TableHeader.Attachments)
+                    {
+                        <p class="in-table">&#x1F4CE</p>
+                    }
+                    else
+                    {
+                        <p class="in-table">@header.ToString()</p>
+                    }
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        <Virtualize @ref="virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
+            <ItemContent>
+                <MailTableEntry Message="@message" @onclick="() => DisplayMessage(message)" />
+            </ItemContent>
+            <Placeholder><p>Loading Message...</p></Placeholder>
+        </Virtualize>
+    </tbody>
+</table>
+
+
+@if (showMessage)
+{
+    <DisplayMail Message="@selectedMessage" OnClose="@DisplayMailClosing" />
+}
+
+@code {
+    private int numMessages = 0;
+    private ICollection<MailMessage> messages { get; set; }
+    private MailMessage? selectedMessage;
+    private bool showMessage = false;
+    private TableHeader headerToSortBy = TableHeader.Date;
+    private List<string> filterFolders = new() { "All" };
+    private string _selectedFolder = "All";
+    private bool sortAscending = false;
+    private string _filterString = "";
+
+    private Virtualize<MailMessage>? virtualizeComponent;
+
+    private string selectedFolder
+    {
+        get => _selectedFolder;
+        set
+        {
+            _selectedFolder = value;
+            searchEvent?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    private string filterString
+    {
+        get => _filterString;
+        set
+        {
+            _filterString = value;
+            searchEvent?.Invoke(null, EventArgs.Empty);
+        }
+    }
+
+    private event EventHandler? searchEvent;
+    private ArchiveContext context;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        context = await Program.ContextFactory.CreateDbContextAsync();
+        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
+        searchEvent += async (sender, e) => await MessageUpdate();
+    }
+
+    private async Task sortTable(TableHeader header)
+    {
+        if (headerToSortBy == header)
+            sortAscending = !sortAscending;
+        else
+            headerToSortBy = header;
+        await MessageUpdate();
+    }
+
+    private async Task MessageUpdate()
+    {
+        if (virtualizeComponent != null)
+            await virtualizeComponent.RefreshDataAsync();
+        StateHasChanged();
+    }
+
+    private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
+    {
+        var msgs = context.MailMessages.AsQueryable();
+        if (selectedFolder != "All")
+            msgs = msgs.Where(m => m.Folder == selectedFolder);
+        if (filterString.Trim() != string.Empty)
+            msgs = msgs.Where(m =>
+            m.Subject.Contains(filterString) ||
+            m.Sender.Contains(filterString) ||
+            m.Recipient.Contains(filterString) ||
+            m.CC_recipient.Contains(filterString) ||
+            m.BCC_recipient.Contains(filterString) ||
+            m.Date.ToString().Contains(filterString) ||
+            m.Attachments.Contains(filterString) ||
+            m.Folder.Contains(filterString) ||
+            m.TextBody.Contains(filterString));
+
+        numMessages = await msgs.CountAsync();
+        StateHasChanged();
+        var ms = msgs.OrderBy(headerToSortBy.ToString(), sortAscending).Skip(request.StartIndex).Take(request.Count);
+        return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
+    }
+
+    private void DisplayMessage(MailMessage message!!)
+    {
+        selectedMessage = message;
+        showMessage = true;
+    }
+
+    private void DisplayMailClosing() => showMessage = false;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (context is not null)
+            await context.DisposeAsync();
+    }
+}

@@ -1,0 +1,52 @@
+﻿@page "/import-api"
+
+@using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Shared;
+@using Microsoft.AspNetCore.WebUtilities;
+@inject NavigationManager NavManager
+
+
+@code {
+    protected async override void OnInitialized()
+    {
+        if (Program.ImportRunning)
+            return;
+        Program.ImportRunning = true;
+
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        using var client = new System.Net.Http.HttpClient();
+        client.Timeout = System.TimeSpan.FromSeconds(10);
+        string callBackUrl = "";
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("CallBackUrl", out var callback))
+        {
+            callBackUrl = callback.ToString().Trim().TrimEnd('/');
+            await client.GetAsync(callBackUrl + "/start");
+        }
+
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accountFilename", out var filename))
+        {
+            string accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
+
+            if (Program.Config.Accounts.Any(acc => acc.AccountFilename == accountFilename))
+            {
+                try
+                {
+                    await ImportMessages.ImportFromServer(accountFilename, new ImportProgress());
+                    await client.GetAsync(callBackUrl);
+                }
+                catch (Exception)
+                {
+                    if (callBackUrl != string.Empty)
+                        await client.GetAsync(callBackUrl + "/fail");
+                }
+                finally
+                {
+                    Program.ImportRunning = false;
+                }
+            }
+        }
+        else
+            await client.GetAsync(callBackUrl + "/fail");
+
+    }
+}

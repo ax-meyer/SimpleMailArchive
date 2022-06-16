@@ -1,0 +1,118 @@
+﻿@page "/import-server"
+
+<PageTitle>Import mail from online account</PageTitle>
+
+@using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Shared;
+@using MailKit;
+@using MailKit.Search;
+@using MailKit.Security;
+@using MailKit.Net.Imap;
+@using MimeKit;
+
+<h1>Import from mailserver</h1>
+
+<p>
+    Select account:
+    <select @bind="selectedAccountFilename">
+        @foreach (var acc in Program.Config.Accounts)
+        {
+            <option value="@acc.AccountFilename">@acc.AccountDisplayName</option>
+        }
+    </select>
+</p>
+
+<p>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@Program.ImportRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
+</p>
+
+<p role="status">@Program.ImportProgress.InfoMessage</p>
+<table class="table-responsive">
+    <tr>
+        <td>Current Folder</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
+    </tr>
+    <tr>
+        <td>Processed messages</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
+    </tr>
+    <tr>
+        <td>Imported messages</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
+    </tr>
+    <tr>
+        <td>Messages deleted on server</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.RemoteMessagesDeletedCount</td>
+    </tr>
+    <tr>
+        <td>Messages deleted locally</td>
+        <td style="padding-left: 10px !important">@Program.ImportProgress?.LocalMessagesDeletedCount</td>
+    </tr>
+</table>
+
+@if (Program.ImportRunning)
+{
+    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
+}
+
+
+@code {
+    private string selectedAccountFilename = Program.Config.Accounts.FirstOrDefault()?.AccountFilename;
+    private CancellationTokenSource ctSource;
+
+    private void Cancel() => ctSource?.Cancel();
+
+    private async Task ImportFromAccount()
+    {
+        if (Program.ImportRunning)
+            return;
+        Program.ImportProgress = new();
+        ctSource = new CancellationTokenSource();
+        Program.ImportProgress.Ct = ctSource.Token;
+        Program.ImportRunning = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            Program.ImportProgress.InfoMessage = "Import running, please wait...";
+            if (selectedAccountFilename == null)
+                throw new ArgumentException("No valid account selected.");
+
+            var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
+
+            while (!mailTask.IsCompleted)
+            {
+                await InvokeAsync(StateHasChanged);
+                Thread.Sleep(1000);
+            }
+
+            if (!Program.ImportProgress.Ct.IsCancellationRequested)
+                Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
+            else
+                Program.ImportProgress.InfoMessage = "Import was cancelled.";
+        }
+        catch (OperationCanceledException)
+        {
+            Program.ImportProgress.InfoMessage = "Import was cancelled.";
+        }
+        catch (InvalidDataException)
+        {
+            Program.ImportProgress.InfoMessage = "INTERNAL ERROR! Hash Mismatch";
+        }
+        catch (ArgumentException ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Unexpected Error: {ex.Message}";
+        }
+        finally
+        {
+            Program.ImportRunning = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

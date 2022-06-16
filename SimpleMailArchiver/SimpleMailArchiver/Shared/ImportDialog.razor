@@ -1,0 +1,58 @@
+﻿@using SimpleMailArchiver.Data;
+@using SimpleMailArchiver.Pages;
+@using Microsoft.EntityFrameworkCore;
+@using System.IO;
+@using System;
+@using Microsoft.AspNetCore.Hosting;
+@using System.Text.Json;
+@inject IJSRuntime JSRuntime;
+
+<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
+     aria-modal="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Import</h4>
+                <button type="button" class="close" @onclick="@ModalCancel">Cancel</button>
+            </div>
+            <div class="modal-body">
+                <p role="status">@Progress.InfoMessage</p>
+                <table class="table-responsive">
+                    <tr>
+                        <td>Current Folder</td>
+                        <td style="padding-left: 10px !important">@Progress?.CurrentFolder</td>
+                    </tr>
+                    <tr>
+                        <td>Processed messages</td>
+                        <td style="padding-left: 10px !important">@Progress?.ParsedMessageCount</td>
+                    </tr>
+                    <tr>
+                        <td>Imported messages</td>
+                        <td style="padding-left: 10px !important">@Progress?.ImportedMessageCount</td>
+                    </tr>
+                    <tr>
+                        <td>Messages deleted on server</td>
+                        <td style="padding-left: 10px !important">@Progress?.RemoteMessagesDeletedCount</td>
+                    </tr>
+                    <tr>
+                        <td>Messages deleted locally</td>
+                        <td style="padding-left: 10px !important">@Progress?.LocalMessagesDeletedCount</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter]
+    public ImportProgress Progress { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnCancel { get; set; }
+    private Task ModalCancel() => OnCancel.InvokeAsync(false);
+
+    protected override void OnInitialized()
+    {
+    }
+}

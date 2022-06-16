@@ -1,6 +1,0 @@
-########## Example MailArchiver configuration file ##########
-########## SAVE AS pyMailArchiverConfig.ini! ##########
-[Global]
-DatabaseFile=pyMailArchiverDB.db
-archiveBasePath=/path/to/eml/folder/
-
