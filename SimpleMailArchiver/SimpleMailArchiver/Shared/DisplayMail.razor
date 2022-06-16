@@ -26,23 +26,32 @@
                         <td>To</td>
                         <td>@Message.Recipient</td>
                     </tr>
-                    <tr>
-                        <td>CC</td>
-                        <td>@Message.CC_recipient</td>
-                    </tr>
-                    <tr>
-                        <td>BCC</td>
-                        <td>@Message.BCC_recipient</td>
-                    </tr>
-                    <tr>
-                        <td>Attachments:</td>
-                        <td>
-                            @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments))
-                            {
-                                @attachment <br />
-                            }
-                        </td>
-                    </tr>
+                    @if (Message.CC_recipient.Trim() != string.Empty)
+                    {
+                        <tr>
+                            <td>CC</td>
+                            <td>@Message.CC_recipient</td>
+                        </tr>
+                    }
+                    @if (Message.BCC_recipient.Trim() != string.Empty)
+                    {
+                        <tr>
+                            <td>BCC</td>
+                            <td>@Message.BCC_recipient</td>
+                        </tr>
+                    }
+                    @if (Message.Attachments.Trim() != "[]")
+                    {
+                        <tr>
+                            <td>Attachments:</td>
+                            <td>
+                                @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments))
+                                {
+                                    @attachment <br />
+                                }
+                            </td>
+                        </tr>
+                    }
                 </table>
                 <br /><br />
                 @if (Message.HtmlBody != null)
@@ -60,7 +69,7 @@
 
 @code{
     [Parameter]
-    public MailMessage Message { get; set; }
+    public MailMessage Message { get; set; } = new();
 
     [Parameter]
     public EventCallback<bool> OnClose { get; set; }

@@ -11,6 +11,7 @@ namespace SimpleMailArchiver.Data
 	{
 		public static async Task ImportFromServer(string accountFilename, ImportProgress progress)
         {
+            Program.Logger.LogInformation($"Starting import from server on {accountFilename}");
             Program.ImportRunning = true;
 
             var account = Program.Config.Accounts.First(item => item.AccountFilename == accountFilename);
@@ -48,7 +49,7 @@ namespace SimpleMailArchiver.Data
 
                         using var hmsg = new MimeMessage(messageSummary.Headers)
                         {
-                            Date = (DateTimeOffset)messageSummary.InternalDate
+                            Date = (DateTimeOffset)messageSummary.InternalDate!
                         };
                         var headerMsg = await MailMessage.Construct(hmsg, folder.ToString(), progress.Ct);
                         progress.ParsedMessageCount++;
@@ -72,7 +73,7 @@ namespace SimpleMailArchiver.Data
                                 existingMsg.Folder = folder.FullName;
                                 var newEmlPath = existingMsg.EmlPath;
                                 var dirName = Path.GetDirectoryName(newEmlPath);
-                                Directory.CreateDirectory(dirName);
+                                Directory.CreateDirectory(dirName!);
                                 File.Move(oldEmlPath, newEmlPath);
                             }
                             continue;
@@ -117,6 +118,7 @@ namespace SimpleMailArchiver.Data
             {
                 await context.SaveChangesAsync(progress.Ct);
                 Program.ImportRunning = false;
+                Program.Logger.LogInformation("Finished import from server");
             }
         }
 	}

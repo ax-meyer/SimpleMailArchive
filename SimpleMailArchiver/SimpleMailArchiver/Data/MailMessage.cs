@@ -6,6 +6,19 @@ using MimeKit;
 
 namespace SimpleMailArchiver.Data;
 
+/// <summary>
+/// Table headers to display a mail message.
+/// </summary>
+public enum TableHeader
+{
+    Date,
+    Subject,
+    Sender,
+    Recipient,
+    Folder,
+    Attachments
+}
+
 public partial class MailMessage
 {
 

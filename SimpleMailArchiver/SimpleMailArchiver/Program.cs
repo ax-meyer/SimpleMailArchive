@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Console;
 using SimpleMailArchiver.Areas.Identity;
 using SimpleMailArchiver.Data;
 
@@ -9,10 +9,12 @@ namespace SimpleMailArchiver
 {
     public class Program
     {
-        public static AppConfig Config { get; } = AppConfig.Load("config.json");
-        public static IDbContextFactory<ArchiveContext> ContextFactory { get; private set; }
         public static ImportProgress ImportProgress { get; set; } = new();
         public static bool ImportRunning { get; set; } = false;
+
+        public static AppConfig Config { get; } = AppConfig.Load();
+        public static IDbContextFactory<ArchiveContext> ContextFactory { get; private set; }
+        public static ILogger Logger { get; private set; }
 
         public static void Main(string[] args)
         {
@@ -34,6 +36,12 @@ namespace SimpleMailArchiver
             builder.Services.AddSingleton<DatabaseService>();
 
             builder.Services.AddLocalization();
+
+            builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+            builder.Logging.AddConsole(c =>
+            {
+                c.TimestampFormat = "[HH:mm:ss] ";
+            });
 
             var app = builder.Build();
 
@@ -63,6 +71,7 @@ namespace SimpleMailArchiver
 
             DatabaseService.Initialize(app.Services);
             ContextFactory = app.Services.GetService<IDbContextFactory<ArchiveContext>>()!;
+            Logger = app.Logger;
 
             app.Run();
         }

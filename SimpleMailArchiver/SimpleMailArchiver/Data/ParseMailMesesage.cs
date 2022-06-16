@@ -41,4 +41,3 @@ namespace SimpleMailArchiver.Data
         }
 	}
 }
-

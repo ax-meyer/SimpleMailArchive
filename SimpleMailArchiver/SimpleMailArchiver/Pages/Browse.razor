@@ -7,8 +7,9 @@
 @using Microsoft.EntityFrameworkCore;
 @using System.Text.Json;
 
+@implements IAsyncDisposable
+
 <h1>Mail Archive</h1>
-<p>Total number of messages: @totalNumMessages</p>
 
 <p>
     Folder:
@@ -25,57 +26,37 @@
     <input @bind="filterString" placeholder="Type to search..." />
 </p>
 
-@if (messages == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                @foreach (var header in Enum.GetValues(typeof(TableHeader)))
-                {
-                    if (((TableHeader)header) == TableHeader.Attachments)
+<p>Number of messages: @numMessages</p>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            @foreach (TableHeader header in Enum.GetValues(typeof(TableHeader)))
+            {
+                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => sortTable(header))">
+                    @if (header == TableHeader.Attachments)
                     {
-                        <th @onclick="@(e => sortTable((TableHeader)header))">&#x1F4CE;</th>
- // paperclip symbol
+                        <p class="in-table">&#x1F4CE</p>
                     }
                     else
                     {
-                        <th @onclick="@(e => sortTable((TableHeader)header))">@header.ToString()</th>
+                        <p class="in-table">@header.ToString()</p>
                     }
-                }
-            </tr>
-        </thead>
-        <tbody>
-            <Virtualize Items="@messages" Context="message">
-                <tr @onclick="() => DisplayMessage(message)">
-                    @foreach (var header in Enum.GetValues(typeof(TableHeader)))
-                        {
-                            if (((TableHeader)header) == TableHeader.Attachments)
-                            {
-                                var attachments = JsonSerializer.Deserialize<string[]>(message.Attachments);
-                                var hasAttachments = attachments?.Length > 0;
-                                if (hasAttachments)
-                                {
-                                <td>&check; (@attachments?.Length)</td>
-                                }
-                                else
-                                {
-                                <td>&cross;</td>
-                                }
-                            }
-                            else
-                            {
-                            <td>@message.GetType().GetProperty(header.ToString())?.GetValue(message)</td>
-                            }
-                        }
-                </tr>
-            </Virtualize>
-        </tbody>
-    </table>
-}
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        <Virtualize @ref="virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
+            <ItemContent>
+                <MailTableEntry Message="@message" @onclick="() => DisplayMessage(message)" />
+            </ItemContent>
+            <Placeholder><p>Loading Message...</p></Placeholder>
+        </Virtualize>
+    </tbody>
+</table>
+
 
 @if (showMessage)
 {
@@ -83,15 +64,18 @@ else
 }
 
 @code {
-    private int totalNumMessages = 0;
-    private MailMessage[] messages { get; set; } = null;
-    private MailMessage selectedMessage;
+    private int numMessages = 0;
+    private ICollection<MailMessage> messages { get; set; }
+    private MailMessage? selectedMessage;
     private bool showMessage = false;
     private TableHeader headerToSortBy = TableHeader.Date;
     private List<string> filterFolders = new() { "All" };
     private string _selectedFolder = "All";
     private bool sortAscending = false;
     private string _filterString = "";
+
+    private Virtualize<MailMessage>? virtualizeComponent;
+
     private string selectedFolder
     {
         get => _selectedFolder;
@@ -112,28 +96,16 @@ else
         }
     }
 
-    private event EventHandler searchEvent;
-
-
-    enum TableHeader
-    {
-        Date,
-        Subject,
-        Sender,
-        Recipient,
-        Folder,
-        Attachments
-    }
-
+    private event EventHandler? searchEvent;
+    private ArchiveContext context;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        using var context = await Program.ContextFactory.CreateDbContextAsync();
+        context = await Program.ContextFactory.CreateDbContextAsync();
         filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
-        await GetMessgesAsync();
-        searchEvent += async (sender, e) => await GetMessgesAsync();
+        searchEvent += async (sender, e) => await MessageUpdate();
     }
 
     private async Task sortTable(TableHeader header)
@@ -142,14 +114,18 @@ else
             sortAscending = !sortAscending;
         else
             headerToSortBy = header;
-        await GetMessgesAsync();
+        await MessageUpdate();
     }
 
-    private async Task GetMessgesAsync()
+    private async Task MessageUpdate()
     {
-        messages = null;
+        if (virtualizeComponent != null)
+            await virtualizeComponent.RefreshDataAsync();
         StateHasChanged();
-        using var context = await Program.ContextFactory.CreateDbContextAsync();
+    }
+
+    private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
+    {
         var msgs = context.MailMessages.AsQueryable();
         if (selectedFolder != "All")
             msgs = msgs.Where(m => m.Folder == selectedFolder);
@@ -165,9 +141,10 @@ else
             m.Folder.Contains(filterString) ||
             m.TextBody.Contains(filterString));
 
-        messages =  await msgs.OrderBy(headerToSortBy.ToString(), sortAscending).ToArrayAsync();
-        totalNumMessages = messages.Length;
+        numMessages = await msgs.CountAsync();
         StateHasChanged();
+        var ms = msgs.OrderBy(headerToSortBy.ToString(), sortAscending).Skip(request.StartIndex).Take(request.Count);
+        return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
     }
 
     private void DisplayMessage(MailMessage message!!)
@@ -177,5 +154,10 @@ else
     }
 
     private void DisplayMailClosing() => showMessage = false;
-}
 
+    public async ValueTask DisposeAsync()
+    {
+        if (context is not null)
+            await context.DisposeAsync();
+    }
+}

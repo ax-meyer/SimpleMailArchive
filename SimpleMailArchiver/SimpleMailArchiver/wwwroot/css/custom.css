@@ -22,3 +22,20 @@ body .modal-dialog { /* Width */
 .modal-open .modal {
 
 }
+
+.browse-table-header.attachments {
+    width: 4em !important;
+}
+
+.browse-table-header.date {
+    width: 7em;
+}
+
+p.in-table {
+    margin: 0px;
+}
+
+.browse-table-cell {
+    height: 50px;
+    overflow: hidden;
+}
