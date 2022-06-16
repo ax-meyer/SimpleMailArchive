@@ -1,0 +1,14 @@
+version: "3"
+services:
+  simplemailarchive:
+    container_name: mailarchive
+    image: axmeyer/simplemailarchive:latest
+    ports:
+      - 80:80/tcp 
+      - 443:443/tcp
+    restart: unless-stopped
+    volumes:
+      - /opt/mailarchive/db:/etc/maildb # sqlite database is stored here - should be on a fast drive (e.g. ssd).
+      - /opt/mailarchive/accounts:/etc/mailaccounts
+      - /mnt/data/mailarchive_data/import:/etc/mailimport # only needed to import old e-mails from .eml files
+      - /mnt/data/mailarchive_data/archive:/etc/mailarchive # here all the eml files get stored. Gets large, can be on slow drives.
