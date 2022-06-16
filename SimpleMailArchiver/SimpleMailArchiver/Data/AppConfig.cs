@@ -33,7 +33,6 @@ namespace SimpleMailArchiver.Data
 
             if (archiveBasePathEnv != null && importBasePathEnv != null && accountConfigsPathEnv != null && dbPathEnv != null)
             {
-                Program.Logger.LogInformation("Using Environment variables for configuration");
                 config = new()
                 {
                     ArchiveBasePath = archiveBasePathEnv,
@@ -45,7 +44,6 @@ namespace SimpleMailArchiver.Data
             else
             {
                 string configPath = "config.json";
-                Program.Logger.LogInformation($"Using file {configPath} for configuration");
 
                 try
                 {
@@ -63,14 +61,6 @@ namespace SimpleMailArchiver.Data
             if (config is null)
                 throw new InvalidDataException($"Could not load config.");
 
-            Program.Logger.LogInformation(
-                "Using conifg:\n\t" +
-                $"Account configs path: {config.AccountConfigsPath}\n\t" +
-                $"Import base path: {config.ImportBasePath}\n\t"+
-                $"Archive base path: {config.ArchiveBasePath}\n\t" +
-                $"Database path: {config.DbPath}"
-                );
-
             if (Directory.Exists(config.AccountConfigsPath))
             {
                 var files = Directory.GetFiles(config.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
@@ -83,7 +73,6 @@ namespace SimpleMailArchiver.Data
                         {
                             acc.AccountFilename = Path.GetFileName(file);
                             config.Accounts.Add(acc);
-                            Program.Logger.LogInformation($"Found account {acc.AccountFilename}");
                         }
                     }
                     catch (JsonException)

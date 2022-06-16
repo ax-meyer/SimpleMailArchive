@@ -73,6 +73,17 @@ namespace SimpleMailArchiver
             ContextFactory = app.Services.GetService<IDbContextFactory<ArchiveContext>>()!;
             Logger = app.Logger;
 
+            Logger.LogInformation(
+                "Using conifg:\n\t" +
+                $"Account configs path: {Config.AccountConfigsPath}\n\t" +
+                $"Import base path: {Config.ImportBasePath}\n\t" +
+                $"Archive base path: {Config.ArchiveBasePath}\n\t" +
+                $"Database path: {Config.DbPath}"
+                );
+
+            foreach(var account in Config.Accounts)
+                Logger.LogInformation($"Found account {account.AccountFilename}");
+
             app.Run();
         }
     }

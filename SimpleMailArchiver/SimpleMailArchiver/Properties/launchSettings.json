@@ -15,13 +15,19 @@
       "applicationUrl": "https://localhost:7060;http://localhost:5242",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "SimpleMailArchiver": {
+        "commandName": "SimpleMailArchiver",
+        "dotnetRunMessages": false,
+        "launchBrowser": false,
+        "applicationUrl": "https://localhost:443;http://localhost:80"
+      },
+      "IIS Express": {
+        "commandName": "IISExpress",
+        "launchBrowser": true,
+        "environmentVariables": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
       }
     }
   }
