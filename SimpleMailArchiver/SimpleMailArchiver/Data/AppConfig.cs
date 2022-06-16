@@ -61,6 +61,13 @@ namespace SimpleMailArchiver.Data
             if (config is null)
                 throw new InvalidDataException($"Could not load config.");
 
+            return config;
+        }
+
+        public static AppConfig LoadAccounts(AppConfig config)
+        {
+            if (Program.Logger == null)
+                throw new InvalidOperationException("Execute LoadAccounts only after setting up the logger");
             if (Directory.Exists(config.AccountConfigsPath))
             {
                 var files = Directory.GetFiles(config.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
@@ -73,11 +80,12 @@ namespace SimpleMailArchiver.Data
                         {
                             acc.AccountFilename = Path.GetFileName(file);
                             config.Accounts.Add(acc);
+                            Program.Logger.LogInformation($"Found account {acc.AccountFilename}");
                         }
                     }
-                    catch (JsonException)
+                    catch (JsonException ex)
                     {
-
+                        Program.Logger.LogError($"Loading account {file} failed with error {ex.Message}");
                     }
                 }
             }

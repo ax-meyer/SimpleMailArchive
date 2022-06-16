@@ -29,6 +29,16 @@ namespace SimpleMailArchiver.Data
                     FolderOptions? folderOptions = account.FolderOptions.Where(f => f.Name == folder.FullName).FirstOrDefault();
                     if (folderOptions != null && folderOptions.Exclude)
                         continue;
+
+                    string archiveFolder = "";
+                    if (account.BasePathInArchive != null && account.BasePathInArchive.Trim().TrimEnd('/') != string.Empty)
+                        archiveFolder = account.BasePathInArchive.TrimEnd('/') + "/";
+
+                    if (folderOptions != null && folderOptions.NameInArchive != null && folderOptions.NameInArchive?.Trim() != string.Empty)
+                        archiveFolder += folderOptions.NameInArchive;
+                    else
+                        archiveFolder += folder.FullName;
+
                     progress.Ct.ThrowIfCancellationRequested();
 
                     progress.CurrentFolder = folder.FullName;
@@ -51,7 +61,7 @@ namespace SimpleMailArchiver.Data
                         {
                             Date = (DateTimeOffset)messageSummary.InternalDate!
                         };
-                        var headerMsg = await MailMessage.Construct(hmsg, folder.ToString(), progress.Ct);
+                        var headerMsg = await MailMessage.Construct(hmsg, archiveFolder, progress.Ct);
                         progress.ParsedMessageCount++;
 
                         // mark message to be deleted if meets the deletion date.
@@ -67,10 +77,10 @@ namespace SimpleMailArchiver.Data
                         {
                             // check if message is now in different folder on the server
                             // if yes, move in archive
-                            if (existingMsg.Folder != folder.ToString())
+                            if (existingMsg.Folder != archiveFolder)
                             {
                                 var oldEmlPath = existingMsg.EmlPath;
-                                existingMsg.Folder = folder.FullName;
+                                existingMsg.Folder = archiveFolder;
                                 var newEmlPath = existingMsg.EmlPath;
                                 var dirName = Path.GetDirectoryName(newEmlPath);
                                 Directory.CreateDirectory(dirName!);
@@ -81,7 +91,7 @@ namespace SimpleMailArchiver.Data
                                       
                         using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct);
                         msg.Date = (DateTimeOffset)messageSummary.InternalDate;
-                        var mmsg = await MailMessage.Construct(msg, folder.ToString(), progress.Ct);
+                        var mmsg = await MailMessage.Construct(msg, archiveFolder, progress.Ct);
 
                         progress.Ct.ThrowIfCancellationRequested();
 
@@ -101,6 +111,7 @@ namespace SimpleMailArchiver.Data
                         //await folder.ExpungeAsync(progress.Ct);
                         progress.RemoteMessagesDeletedCount += messageToDeleteIds.Count;
                     }
+
                     if (folderOptions != null && folderOptions.SyncServerFolder)
                     {
                         var msgsToDelete = context.MailMessages.Where(msg => !messagesOnServer.Any(onServer => msg.Hash == onServer) && msg.Folder == folder.FullName).ToArray();

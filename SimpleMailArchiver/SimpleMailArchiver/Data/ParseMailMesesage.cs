@@ -31,8 +31,8 @@ namespace SimpleMailArchiver.Data
         public static string MailSavePath(MailMessage message!!)
         {            
             string path = Program.Config.ArchiveBasePath.Trim();
-            if (path.Length > 0 && !path.EndsWith("/")) { path += "/"; }
-            path += message.Folder;
+            if (path.Length > 0) { path = path.TrimEnd('/') + "/"; }
+            path += message.Folder.TrimEnd('/');
             path += "/";
             Directory.CreateDirectory(path);
             path += message.Hash;

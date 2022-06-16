@@ -17,7 +17,7 @@ public class FolderOptions
     /// Folder path in the archive. If empty, <see cref="Name"/> will be used.
     /// Usefull to e.g. consolidate multiple accounts into a single folder structure.
     /// </summary>
-    public string NameInAchrive { get; init; }
+    public string NameInArchive { get; init; }
 
 	/// <summary>
     /// If true, folder will be excluded from archiving.

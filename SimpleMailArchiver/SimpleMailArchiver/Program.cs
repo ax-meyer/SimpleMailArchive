@@ -81,8 +81,7 @@ namespace SimpleMailArchiver
                 $"Database path: {Config.DbPath}"
                 );
 
-            foreach(var account in Config.Accounts)
-                Logger.LogInformation($"Found account {account.AccountFilename}");
+            AppConfig.LoadAccounts(Config);
 
             app.Run();
         }
