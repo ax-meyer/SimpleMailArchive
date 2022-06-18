@@ -72,7 +72,7 @@
         Program.ImportProgress.Ct = ctSource.Token;
         Program.ImportRunning = true;
 
-        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
 
         try
         {
@@ -84,7 +84,7 @@
 
             while (!mailTask.IsCompleted)
             {
-                await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
                 Thread.Sleep(1000);
             }
 
@@ -112,7 +112,7 @@
         finally
         {
             Program.ImportRunning = false;
-            await InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
         }
     }
 }

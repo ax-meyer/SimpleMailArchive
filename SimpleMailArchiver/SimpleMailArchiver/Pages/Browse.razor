@@ -66,7 +66,6 @@
 @code {
     private int numMessages = 0;
     private ICollection<MailMessage> messages { get; set; }
-    private MailMessage? selectedMessage;
     private bool showMessage = false;
     private TableHeader headerToSortBy = TableHeader.Date;
     private List<string> filterFolders = new() { "All" };
@@ -74,7 +73,12 @@
     private bool sortAscending = false;
     private string _filterString = "";
 
+
+#nullable enable
+    private MailMessage? selectedMessage;
+    private event EventHandler? searchEvent;
     private Virtualize<MailMessage>? virtualizeComponent;
+#nullable disable
 
     private string selectedFolder
     {
@@ -96,16 +100,15 @@
         }
     }
 
-    private event EventHandler? searchEvent;
     private ArchiveContext context;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync();
+        await base.OnInitializedAsync().ConfigureAwait(false);
 
-        context = await Program.ContextFactory.CreateDbContextAsync();
-        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
-        searchEvent += async (sender, e) => await MessageUpdate();
+        context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
+        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync().ConfigureAwait(false));
+        searchEvent += async (sender, e) => await MessageUpdate().ConfigureAwait(false);
     }
 
     private async Task sortTable(TableHeader header)
@@ -114,13 +117,13 @@
             sortAscending = !sortAscending;
         else
             headerToSortBy = header;
-        await MessageUpdate();
+        await MessageUpdate().ConfigureAwait(false);
     }
 
     private async Task MessageUpdate()
     {
         if (virtualizeComponent != null)
-            await virtualizeComponent.RefreshDataAsync();
+            await virtualizeComponent.RefreshDataAsync().ConfigureAwait(false);
         StateHasChanged();
     }
 
@@ -141,7 +144,7 @@
             m.Folder.Contains(filterString) ||
             m.TextBody.Contains(filterString));
 
-        numMessages = await msgs.CountAsync();
+        numMessages = await msgs.CountAsync().ConfigureAwait(false);
         StateHasChanged();
         var ms = msgs.OrderBy(headerToSortBy.ToString(), sortAscending).Skip(request.StartIndex).Take(request.Count);
         return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
@@ -158,6 +161,6 @@
     public async ValueTask DisposeAsync()
     {
         if (context is not null)
-            await context.DisposeAsync();
+            await context.DisposeAsync().ConfigureAwait(false);
     }
 }

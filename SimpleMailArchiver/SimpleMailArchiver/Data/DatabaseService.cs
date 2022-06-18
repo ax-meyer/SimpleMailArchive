@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
 namespace SimpleMailArchiver.Data
 {
     public class DatabaseService
@@ -9,7 +6,7 @@ namespace SimpleMailArchiver.Data
         public static void Initialize(IServiceProvider serviceProvider)
         {
 
-            using ArchiveContext? context = new(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
+            using ArchiveContext context = new(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
             context.Database.EnsureCreated();
 
             /*

@@ -1,0 +1,37 @@
+name: SimpleMailArchiveBuildAndDeploy
+
+on: [push, pull_request]
+  
+jobs:
+    build:
+        runs-on: [ubuntu-latest]
+        steps:
+        - name: Checkout repo
+          uses: actions/checkout@v2
+
+        - name: Build container
+          run: docker build . -t axmeyer/simplemailarchive:test
+
+        - name: get release version
+          if: startsWith(github.ref, 'refs/tags/v') # make sure deploy only runs on tags with version number
+          run: |
+            echo "RELEASE_VERSION=${GITHUB_REF_NAME:1}" >> $GITHUB_ENV
+            echo $RELEASE_VERSION
+        
+        - name: tag container
+          if: startsWith(github.ref, 'refs/tags/v') # make sure deploy only runs on tags with version number
+          run: docker tag axmeyer/simplemailarchive:test axmeyer/simplemailarchive:$RELEASE_VERSION
+        
+        - name: docker login
+          if: startsWith(github.ref, 'refs/tags/v') # make sure deploy only runs on tags with version number
+          run: echo ${{secrets.DOCKER_HUB_DEPLOY_KEY}} | docker login --username ${{secrets.DOCKER_HUB_USER}} --password-stdin
+        
+        - name: push
+          if: startsWith(github.ref, 'refs/tags/v') # make sure deploy only runs on tags with version number
+          run: docker push axmeyer/simplemailarchive:$RELEASE_VERSION
+
+        - name: Push container as latest if not prerelease
+          if: startsWith(github.ref, 'refs/tags/v') && github.event.release.prerelease
+          run: | 
+            docker tag axmeyer/simplemailarchive:$RELEASE_VERSION axmeyer/simplemailarchive:latest
+            docker push axmeyer/simplemailarchive:latest

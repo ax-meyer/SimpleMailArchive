@@ -26,11 +26,12 @@ namespace SimpleMailArchiver.Data
             string accountConfigsPathEnvVariable = "SMA_ACCOUNTSCONFIGPATH";
             string dbPathEnvVariable = "SMA_DBPATH";
 
+#nullable enable
             string? archiveBasePathEnv = Environment.GetEnvironmentVariable(archiveBasePathEnvVariable);
             string? importBasePathEnv = Environment.GetEnvironmentVariable(importBasePathEnvVariable);
             string? accountConfigsPathEnv = Environment.GetEnvironmentVariable(accountConfigsPathEnvVariable);
             string? dbPathEnv = Environment.GetEnvironmentVariable(dbPathEnvVariable);
-
+#nullable disable
             if (archiveBasePathEnv != null && importBasePathEnv != null && accountConfigsPathEnv != null && dbPathEnv != null)
             {
                 config = new()

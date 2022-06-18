@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Console;
-using SimpleMailArchiver.Areas.Identity;
 using SimpleMailArchiver.Data;
 
 namespace SimpleMailArchiver
@@ -26,38 +25,20 @@ namespace SimpleMailArchiver
                 Directory.CreateDirectory(Config.DbPath);
 
             // Add services to the container.
-            string? connectionString = $"DataSource={Config.DbPath}/archive.db";
+            string connectionString = $"DataSource={Config.DbPath}/archive.db";
             builder.Services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
             builder.Services.AddScoped<DatabaseService>();
 
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
-            builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
             builder.Services.AddSingleton<DatabaseService>();
 
             builder.Services.AddLocalization();
 
             builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
-            builder.Logging.AddConsole(c =>
-            {
-                c.TimestampFormat = "[HH:mm:ss] ";
-            });
+            builder.Logging.AddConsole();
 
             var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
-
-            app.UseHttpsRedirection();
 
             app.UseStaticFiles();
 
@@ -66,8 +47,6 @@ namespace SimpleMailArchiver
             app.MapControllers();
             app.MapBlazorHub();
             app.MapFallbackToPage("/_Host");
-
-            app.UseRequestLocalization(builder.Configuration.GetValue<string>("Localization"));
 
             DatabaseService.Initialize(app.Services);
             ContextFactory = app.Services.GetService<IDbContextFactory<ArchiveContext>>()!;
@@ -82,7 +61,6 @@ namespace SimpleMailArchiver
                 );
 
             AppConfig.LoadAccounts(Config);
-
             app.Run();
         }
     }
