@@ -66,7 +66,6 @@
 @code {
     private int numMessages = 0;
     private ICollection<MailMessage> messages { get; set; }
-    private MailMessage? selectedMessage;
     private bool showMessage = false;
     private TableHeader headerToSortBy = TableHeader.Date;
     private List<string> filterFolders = new() { "All" };
@@ -74,7 +73,12 @@
     private bool sortAscending = false;
     private string _filterString = "";
 
+
+#nullable enable
+    private MailMessage? selectedMessage;
+    private event EventHandler? searchEvent;
     private Virtualize<MailMessage>? virtualizeComponent;
+#nullable disable
 
     private string selectedFolder
     {
@@ -96,7 +100,6 @@
         }
     }
 
-    private event EventHandler? searchEvent;
     private ArchiveContext context;
 
     protected override async Task OnInitializedAsync()

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
 WORKDIR /app
 
 # Copy everything
@@ -6,15 +6,22 @@ COPY ./SimpleMailArchiver ./
 # Restore as distinct layers
 RUN dotnet restore
 # Build and publish a release
-RUN dotnet publish -c Release -o out
+RUN dotnet publish --runtime alpine-x64 -c Release --self-contained true -o oout /p:PublishSingleFile=true /p:PublishTrimmed=true
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet
+FROM alpine:3.9.4
+
+# Add some libs required by .NET runtime 
+RUN apk add --no-cache libstdc++ libintl
+
+EXPOSE 80
 WORKDIR /app
-COPY --from=build-env /app/out .
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT 1
 ENV SMA_ARCHIVEBASEPATH "/etc/mailarchive/"
 ENV SMA_IMPORTBASEPATH "/etc/mailimport/"
 ENV SMA_ACCOUNTSCONFIGPATH "/etc/mailaccounts"
 ENV SMA_DBPATH "/etc/maildb"
+
+COPY --from=build-env /app/out .
 
 ENTRYPOINT ["dotnet", "SimpleMailArchiver.dll"]

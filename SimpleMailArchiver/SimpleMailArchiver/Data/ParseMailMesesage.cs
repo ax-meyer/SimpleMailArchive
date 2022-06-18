@@ -16,8 +16,8 @@ namespace SimpleMailArchiver.Data
             strData += message.Cc.ToString();
             strData += message.Bcc.ToString();
 
-            byte[]? encodedMessage = Encoding.UTF8.GetBytes(strData);
-            using SHA512? alg = SHA512.Create();
+            byte[] encodedMessage = Encoding.UTF8.GetBytes(strData);
+            using SHA512 alg = SHA512.Create();
             string hex = "";
 
             var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token);

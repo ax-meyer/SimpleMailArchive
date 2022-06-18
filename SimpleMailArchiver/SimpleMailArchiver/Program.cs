@@ -26,7 +26,7 @@ namespace SimpleMailArchiver
                 Directory.CreateDirectory(Config.DbPath);
 
             // Add services to the container.
-            string? connectionString = $"DataSource={Config.DbPath}/archive.db";
+            string connectionString = $"DataSource={Config.DbPath}/archive.db";
             builder.Services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
             builder.Services.AddScoped<DatabaseService>();
 
@@ -38,24 +38,9 @@ namespace SimpleMailArchiver
             builder.Services.AddLocalization();
 
             builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
-            builder.Logging.AddConsole(c =>
-            {
-                c.TimestampFormat = "[HH:mm:ss] ";
-            });
+            builder.Logging.AddConsole();
 
             var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
 
             app.UseHttpsRedirection();
 

@@ -15,21 +15,22 @@ namespace SimpleMailArchiver.Pages
             fileName = "mail.eml";
         }
 
-        public static async Task ResetDownload()
+        public static Task ResetDownload()
         {
             fileContent = new byte[] { 0 };
             fileName = "empty";
+            return Task.CompletedTask;
         }
 
         
-        public async Task<IActionResult> OnGet()
+        public Task<IActionResult> OnGet()
         {
             if (fileContent == null)
                 fileContent = new byte[] { 0 };
             if (fileName.Trim() == string.Empty)
                 fileName = "empty";
 
-            return File(fileContent!, "application/force-download", fileName);
+            return Task.FromResult<IActionResult>(File(fileContent!, "application/force-download", fileName));
         }
     }
 }

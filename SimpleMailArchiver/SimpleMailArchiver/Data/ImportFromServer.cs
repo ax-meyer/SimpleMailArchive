@@ -26,7 +26,9 @@ namespace SimpleMailArchiver.Data
             {
                 foreach (var folder in folders)
                 {
+#nullable enable
                     FolderOptions? folderOptions = account.FolderOptions.Where(f => f.Name == folder.FullName).FirstOrDefault();
+#nullable disable
                     if (folderOptions != null && folderOptions.Exclude)
                         continue;
 
