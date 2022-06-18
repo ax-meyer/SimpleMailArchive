@@ -30,8 +30,8 @@ jobs:
           if: startsWith(github.ref, 'refs/tags/v') # make sure deploy only runs on tags with version number
           run: docker push axmeyer/simplemailarchive:$RELEASE_VERSION
 
-        - name: Push container as latest if not prerelease
-          if: startsWith(github.ref, 'refs/tags/v') && github.event.release.prerelease
+        - name: Push container as latest if version number does not start with 'v0.'
+          if: startsWith(github.ref, 'refs/tags/v') && !startsWith($RELEASE_VERSION, 'v0.')
           run: | 
             docker tag axmeyer/simplemailarchive:$RELEASE_VERSION axmeyer/simplemailarchive:latest
             docker push axmeyer/simplemailarchive:latest
