@@ -4,7 +4,6 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>aspnet-SimpleMailArchiver-35D96AA2-39E2-4FEF-B1AA-A2D9620457DB</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -14,32 +13,13 @@
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="MailKit" />
-  </ItemGroup>
-  <ItemGroup>
+    <PackageReference Include="MailKit" Version="3.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.6" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.6"><IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-<PrivateAssets>all</PrivateAssets>
-</PackageReference>
-    <PackageReference Include="MailKit" Version="3.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Condition="'$(ExcludeConfigFilesFromBuildOutput)'!='true'" Update="accounts\acc %28copy%29.account">
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-    <None Update="config.json_sample">
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Remove="2config.json" />
+	<PrivateAssets>all</PrivateAssets>	
+    </PackageReference>
   </ItemGroup>
 </Project>
