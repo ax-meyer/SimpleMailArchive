@@ -43,3 +43,21 @@ Sample for an API call:
 
 ```https://simplemailarchive.sampledomain.com/import-api?accountFilename=john_doe_gmail.account&callBackUrl=https://hc-ping.com/uuid-of-the-check```
 
+## FAQ
+### What about access restrictions?
+Currently, there are no access restrictions imlemented. If you want / need access restrictions, I suggest running it through an reverse proxy like `nginx`
+or `traefik` and add access control in this way.
+
+### What about SSL?
+As with access restrictions, there is nothing directyl build into this application at the moment. But running behind a reverse proxy like suggested for the access restrictions also gives you the option to add encryption at this stage.
+
+### What about multi user support?
+Currently, there is no concept of users in the app. You can add multiple accounts to archive from, and if you configure them to go into their own respective folders in the settings, e-mails from specific accounts can be filtered. But there is no way to restrict someone from seeing all emails from all accounts.
+
+For a few users, it is still feasible to just spin up one instance of this app per user. Be aware however that with a large number of mails, the memory footprint of the app can become more significant due to database caching. My personal archive has aorund 18.000 emails at the moment and the running application takes about 400MB of RAM.
+
+### I would like to see feature X
+Feel free to open an issue. At the moment, this project is just for my personal use, so I only implement what I need. If there is interest from others (like your reading this) I will see what I can add with reasonable effort.
+
+And if you want to contribute, just start hacking and open a pull request.
+
