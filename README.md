@@ -2,6 +2,12 @@
 
 A simple web application to backup & archive email from an IMAP server on your own server in an .eml based file structure.
 
+Here are a few screenshots (please excuse the silly test emails, I just used a bunch of mails I found on the internet as test data to cover as many languages etc. as possible)
+
+![Overview of the archive](doc/ressources/browse_view2.png)
+![Viewing a single message](doc/ressources/message_view.png)
+![Viewing of the import page](doc/ressources/import_view.png)
+
 ## How to use
 Two options:
 - [Docker container](https://hub.docker.com/r/axmeyer/simplemailarchive)
@@ -51,6 +57,9 @@ or `traefik` and add access control in this way.
 ### What about SSL?
 As with access restrictions, there is nothing directyl build into this application at the moment. But running behind a reverse proxy like suggested for the access restrictions also gives you the option to add encryption at this stage.
 
+# How many emails can it handle?
+I don't know. I curently have around 18.000 emails in my personal archive and it works just fine and is very responsive. When going into 6 or 7 figures worth of emails, the limiting factor will probably be the sqlite database which can be switched to something more powerfull with little effort. Should you run into problems because of too many emails, just open an issue and I will see what I can do.
+
 ### What about multi user support?
 Currently, there is no concept of users in the app. You can add multiple accounts to archive from, and if you configure them to go into their own respective folders in the settings, e-mails from specific accounts can be filtered. But there is no way to restrict someone from seeing all emails from all accounts.
 
@@ -61,3 +70,7 @@ Feel free to open an issue. At the moment, this project is just for my personal 
 
 And if you want to contribute, just start hacking and open a pull request.
 
+# Disclaimer
+I do not provide any warranty or other guarantees, if this somehow makes your computer explode and your house burn down, I am not liable. I am also not liable for any kind of data loss. Use at your own risk.
+
+That said, I wrote this tool mainly for personal use since I needed some solution to archive my emails. Thus I trust it with my own emails (around 18.000 at the time of writing) and it works beautifully in day to day use for me.
