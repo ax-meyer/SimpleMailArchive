@@ -4,7 +4,6 @@
 # ignore python objects just created for faster processing
 *.npy
 *.pkl
-*.png
 
 # ignore emails
 *.eml
