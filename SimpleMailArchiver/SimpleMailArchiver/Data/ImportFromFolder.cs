@@ -32,10 +32,6 @@ public static partial class ImportMessages
                     progress.ImportedMessageCount++;
             }).ConfigureAwait(false);
         }
-        catch (Exception ex)
-        {
-            throw;
-        }
         finally
         {
             //await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);

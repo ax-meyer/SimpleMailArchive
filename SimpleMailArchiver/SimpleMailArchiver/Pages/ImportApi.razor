@@ -42,16 +42,24 @@
 
                 try
                 {
-                    await ImportMessages.ImportFromServer(accountFilename, new ImportProgress()).ConfigureAwait(false);
-                    await client.GetAsync(callBackUrl).ConfigureAwait(false);
-                    Program.Logger.LogInformation("API import finished.");
+                    var progress = new ImportProgress();
+                    await ImportMessages.ImportFromServer(accountFilename, progress).ConfigureAwait(false);
+
+                    var msg = $"Import successful. Account {accountFilename}" +
+                        $"\nParsed: {progress.ParsedMessageCount}" +
+                        $"\nImported : {progress.ImportedMessageCount}" +
+                        $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
+                        $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
+                    await client.PostAsync(callBackUrl, new StringContent(msg)).ConfigureAwait(false);
+                    Program.Logger.LogInformation(msg);
                 }
                 catch (Exception ex)
                 {
-                    Program.Logger.LogError($"API import failed with error \"{ex.Message}\"");
+                    var errmsg = $"API import failed with error \"{ex.Message}\"";
+                    Program.Logger.LogError(errmsg);
 
                     if (callBackUrl != string.Empty)
-                        await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
+                        await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -60,15 +68,19 @@
             }
             else
             {
-                Program.Logger.LogError($"No account found for \"{accountFilename}\". Check log at startup to see account loading errors");
-                await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
+                var errmsg = $"No account found for \"{accountFilename}\". Check log at startup to see account loading errors";
+                Program.Logger.LogError(errmsg);
+                if (callBackUrl != string.Empty)
+                    await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
             }
         }
         else
         {
-            Program.Logger.LogError("No account filename provided, api import failed");
+            var errmsg = "No account filename provided, api import failed";
+            Program.Logger.LogError(errmsg);
 
-            await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
+            if (callBackUrl != string.Empty)
+                await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
         }
 
     }
