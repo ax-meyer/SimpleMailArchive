@@ -107,8 +107,8 @@ namespace SimpleMailArchiver.Data
                     // delete messages marked for deletion.
                     if (messageToDeleteIds.Count > 0)
                     {
-                        //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
-                        //await folder.ExpungeAsync(progress.Ct);
+                        await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
+                        await folder.ExpungeAsync(progress.Ct);
                         progress.RemoteMessagesDeletedCount += messageToDeleteIds.Count;
                     }
 
