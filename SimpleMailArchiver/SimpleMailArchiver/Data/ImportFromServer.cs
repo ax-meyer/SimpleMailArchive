@@ -98,10 +98,7 @@ namespace SimpleMailArchiver.Data
                         progress.ParsedMessageCount++;
 
                         if (saved)
-                        {
-                            await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
                             progress.ImportedMessageCount++;
-                        }
                     }
 
                     // delete messages marked for deletion.

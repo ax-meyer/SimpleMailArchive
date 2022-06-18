@@ -10,13 +10,15 @@ public static partial class ImportMessages
         Program.ImportRunning = true;
         Program.Logger.LogInformation("Start import from folder");
 
-        using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct).ConfigureAwait(false);
 
         var basepath_uri = new Uri(importFolderRoot);
+        var token = progress.Ct;
         try
         {
-            foreach (string file in emlPaths)
+            await Parallel.ForEachAsync(emlPaths, async (file, token) =>
             {
+                using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct).ConfigureAwait(false);
+
                 progress.Ct.ThrowIfCancellationRequested();
 
                 // get the relative path of the current email to the archive base path to know where to put the email in the archive.
@@ -28,11 +30,15 @@ public static partial class ImportMessages
 
                 if (saved)
                     progress.ImportedMessageCount++;
-            }
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            throw;
         }
         finally
         {
-            await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
+            //await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
             Program.ImportRunning = false;
             Program.Logger.LogInformation("Finished import from folder");
         }
