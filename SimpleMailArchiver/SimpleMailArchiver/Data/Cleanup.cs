@@ -3,19 +3,23 @@ namespace SimpleMailArchiver.Data
 {
 	public static class Cleanup
 	{
-		public static async Task RecalculateHashes(CancellationToken token = default)
+		private static async Task RecalculateHashes(CancellationToken token = default)
         {
 			var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
 			int count = 0;
 			foreach(var message in context.MailMessages)
             {
-				message.Hash = await ParseMailMessage.CreateMailHash(message, token);
+				message.Hash = await Utils.CreateMailHash(message, token);
 			if (count++ % 100 == 0)
 				await context.SaveChangesAsync().ConfigureAwait(false);
             }
         }
 
-		public static async Task RemoveDuplicates()
+		/// <summary>
+        /// WARNING: NOT TESTED YET
+        /// </summary>
+        /// <returns></returns>
+		private static async Task RemoveDuplicates()
         {
             var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
 			var duplicates = context.MailMessages.GroupBy(i => i.Hash)

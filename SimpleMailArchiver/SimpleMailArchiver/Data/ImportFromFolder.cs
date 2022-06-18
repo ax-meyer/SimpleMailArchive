@@ -23,20 +23,11 @@ public static partial class ImportMessages
                 progress.CurrentFolder = Path.GetDirectoryName(basepath_uri.MakeRelativeUri(new Uri(file)).OriginalString)!;
 
                 using var msg = MimeMessage.Load(file);
-                var mmsg = await MailMessage.Construct(msg, progress.CurrentFolder, progress.Ct).ConfigureAwait(false);
+                bool saved = await Utils.SaveMessage(msg, progress.CurrentFolder, context, progress.Ct).ConfigureAwait(false);
                 progress.ParsedMessageCount++;
 
-                if (await context.MailMessages.AnyAsync(o => o.Hash == mmsg.Hash, progress.Ct).ConfigureAwait(false))
-                    continue;
-
-                progress.Ct.ThrowIfCancellationRequested();
-
-                var dbTask = context.AddAsync(mmsg);
-                var fileTask = msg.WriteToAsync(mmsg.EmlPath);
-                await dbTask.ConfigureAwait(false);
-                await fileTask.ConfigureAwait(false);
-                await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
-                progress.ImportedMessageCount++;
+                if (saved)
+                    progress.ImportedMessageCount++;
             }
         }
         finally

@@ -93,17 +93,15 @@ namespace SimpleMailArchiver.Data
                                       
                         using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct).ConfigureAwait(false);
                         msg.Date = (DateTimeOffset)messageSummary.InternalDate;
-                        var mmsg = await MailMessage.Construct(msg, archiveFolder, progress.Ct).ConfigureAwait(false);
 
-                        progress.Ct.ThrowIfCancellationRequested();
+                        bool saved = await Utils.SaveMessage(msg, progress.CurrentFolder, context, progress.Ct).ConfigureAwait(false);
+                        progress.ParsedMessageCount++;
 
-                        // don't pass CancellationToken to those two awaits - makes sure that state consitend even in case of cancellation.
-                        var addDbTask = context.AddAsync(mmsg);
-                        var WriteToDiskTask = msg.WriteToAsync(mmsg.EmlPath);
-                        await addDbTask.ConfigureAwait(false);
-                        await WriteToDiskTask.ConfigureAwait(false);
-                        await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
-                        progress.ImportedMessageCount++;
+                        if (saved)
+                        {
+                            await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
+                            progress.ImportedMessageCount++;
+                        }
                     }
 
                     // delete messages marked for deletion.

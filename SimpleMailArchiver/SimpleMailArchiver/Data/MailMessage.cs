@@ -78,7 +78,7 @@ public partial class MailMessage : IEquatable<MailMessage>
             HtmlBody = mimeMessage.HtmlBody
         };
 
-        msg.Hash = await ParseMailMessage.CreateMailHash(msg, token).ConfigureAwait(false);
+        msg.Hash = await Utils.CreateMailHash(msg, token).ConfigureAwait(false);
         return msg;
     }
 
