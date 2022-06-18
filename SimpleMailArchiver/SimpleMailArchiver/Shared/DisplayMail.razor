@@ -77,8 +77,8 @@
 
     private async Task Download()
     {
-        await FileDownloadsModel.PrepareMessageForDownload(Message);
-        await JSRuntime.InvokeAsync<object>("open", "download", "_blank");
+        await FileDownloadsModel.PrepareMessageForDownload(Message).ConfigureAwait(false);
+        await JSRuntime.InvokeAsync<object>("open", "download", "_blank").ConfigureAwait(false);
     }
 
     protected override void OnInitialized()

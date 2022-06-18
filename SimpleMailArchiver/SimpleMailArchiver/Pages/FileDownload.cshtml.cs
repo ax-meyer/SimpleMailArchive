@@ -11,7 +11,7 @@ namespace SimpleMailArchiver.Pages
 
         public static async Task PrepareMessageForDownload(MailMessage message, CancellationToken token = default)
         {
-            fileContent = await System.IO.File.ReadAllBytesAsync(message.EmlPath, token);
+            fileContent = await System.IO.File.ReadAllBytesAsync(message.EmlPath, token).ConfigureAwait(false);
             fileName = "mail.eml";
         }
 

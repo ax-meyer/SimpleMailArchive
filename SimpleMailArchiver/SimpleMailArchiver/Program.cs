@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Console;
-using SimpleMailArchiver.Areas.Identity;
 using SimpleMailArchiver.Data;
 
 namespace SimpleMailArchiver
@@ -32,7 +31,6 @@ namespace SimpleMailArchiver
 
             builder.Services.AddRazorPages();
             builder.Services.AddServerSideBlazor();
-            builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
             builder.Services.AddSingleton<DatabaseService>();
 
             builder.Services.AddLocalization();
@@ -63,7 +61,6 @@ namespace SimpleMailArchiver
                 );
 
             AppConfig.LoadAccounts(Config);
-
             app.Run();
         }
     }

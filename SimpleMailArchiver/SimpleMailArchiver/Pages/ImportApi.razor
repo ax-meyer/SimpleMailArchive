@@ -26,7 +26,7 @@
 
             Program.Logger.LogInformation($"callback url: \"{callBackUrl}\"");
 
-            await client.GetAsync(callBackUrl + "/start");
+            await client.GetAsync(callBackUrl + "/start").ConfigureAwait(false);
         }
         else
             Program.Logger.LogInformation("No callback url found");
@@ -42,8 +42,8 @@
 
                 try
                 {
-                    await ImportMessages.ImportFromServer(accountFilename, new ImportProgress());
-                    await client.GetAsync(callBackUrl);
+                    await ImportMessages.ImportFromServer(accountFilename, new ImportProgress()).ConfigureAwait(false);
+                    await client.GetAsync(callBackUrl).ConfigureAwait(false);
                     Program.Logger.LogInformation("API import finished.");
                 }
                 catch (Exception ex)
@@ -51,7 +51,7 @@
                     Program.Logger.LogError($"API import failed with error \"{ex.Message}\"");
 
                     if (callBackUrl != string.Empty)
-                        await client.GetAsync(callBackUrl + "/fail");
+                        await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
                 }
                 finally
                 {
@@ -61,14 +61,14 @@
             else
             {
                 Program.Logger.LogError($"No account found for \"{accountFilename}\". Check log at startup to see account loading errors");
-                await client.GetAsync(callBackUrl + "/fail");
+                await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
             }
         }
         else
         {
             Program.Logger.LogError("No account filename provided, api import failed");
 
-            await client.GetAsync(callBackUrl + "/fail");
+            await client.GetAsync(callBackUrl + "/fail").ConfigureAwait(false);
         }
 
     }

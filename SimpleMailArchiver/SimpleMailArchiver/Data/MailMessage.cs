@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using MimeKit;
-#nullable disable
+using System.Diagnostics.CodeAnalysis;
 
 namespace SimpleMailArchiver.Data;
 
@@ -19,7 +19,7 @@ public enum TableHeader
     Attachments
 }
 
-public partial class MailMessage
+public partial class MailMessage : IEquatable<MailMessage>
 {
 
     [Key]
@@ -38,7 +38,7 @@ public partial class MailMessage
     public string HtmlBody { get; set; }
 
     [NotMapped]
-    public string EmlPath => (Program.Config.ArchiveBasePath + "/" + Folder + "/" + Hash + ".eml").Replace("//", "/");
+    public string EmlPath => (Program.Config.ArchiveBasePath + "/" + Folder + "/message-" + ID.ToString() + ".eml").Replace("//", "/");
 
     public MailMessage() { }
 
@@ -64,9 +64,8 @@ public partial class MailMessage
             }
         }
 
-        return new MailMessage()
+        var msg = new MailMessage()
         {
-            Hash = await ParseMailMessage.CreateMailHash(mimeMessage, token),
             Subject = mimeMessage.Subject,
             Sender = mimeMessage.From.ToString(),
             Recipient = mimeMessage.To.ToString(),
@@ -78,5 +77,43 @@ public partial class MailMessage
             TextBody = mimeMessage.TextBody,
             HtmlBody = mimeMessage.HtmlBody
         };
+
+        msg.Hash = await ParseMailMessage.CreateMailHash(msg, token).ConfigureAwait(false);
+        return msg;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is MailMessage other)
+        {
+            bool equal = true;
+            foreach (var prop in this.GetType().GetProperties())
+            {
+                if (prop.Name == nameof(MailMessage.ID) || prop.Name == nameof(MailMessage.EmlPath))
+                    continue;
+                else if (prop.Name == nameof(MailMessage.Date))
+                {
+                    DateTime first = this.Date;
+                    DateTime second = other.Date;
+                    string fmt = "dd.MM.yyyy-HH:mm:ss";
+                    equal = first.ToString(fmt) == second.ToString(fmt);
+                }
+                else
+                    equal = prop.GetValue(this) == prop.GetValue(other);
+            }
+            return equal;
+        }
+        else
+            throw new InvalidDataException();
+    }
+
+    public bool Equals(MailMessage other)
+    {
+        return Equals((object)other);
+    }
+
+    public override int GetHashCode()
+    {
+        throw new NotImplementedException();
     }
 }

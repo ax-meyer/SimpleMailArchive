@@ -7,20 +7,20 @@ namespace SimpleMailArchiver.Data
 {
 	public class ParseMailMessage
 	{
-		public static async Task<string> CreateMailHash(MimeMessage message!!, CancellationToken token = default)
+		public static async Task<string> CreateMailHash(MailMessage message!!, CancellationToken token = default)
         {
-            var strData = message.Date.ToString();
+            var strData = message.Date.ToString("dd.MM.yyyy-HH:mm:ss");
             strData += message.Subject;
-            strData += message.From.ToString();
-            strData += message.To.ToString();
-            strData += message.Cc.ToString();
-            strData += message.Bcc.ToString();
+            strData += message.Sender.ToString();
+            strData += message.Recipient.ToString();
+            strData += message.CC_recipient.ToString();
+            strData += message.BCC_recipient.ToString();
 
             byte[] encodedMessage = Encoding.UTF8.GetBytes(strData);
-            using SHA512 alg = SHA512.Create();
+            using var alg = SHA256.Create();
             string hex = "";
 
-            var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token);
+            var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token).ConfigureAwait(false);
             foreach (byte x in hashValue)
             {
                 hex += string.Format("{0:x2}", x);

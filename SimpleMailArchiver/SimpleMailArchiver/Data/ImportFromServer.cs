@@ -17,11 +17,11 @@ namespace SimpleMailArchiver.Data
             var account = Program.Config.Accounts.First(item => item.AccountFilename == accountFilename);
 
             using var client = new ImapClient();
-            await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct);
-            await client.AuthenticateAsync(account.Username, account.Password, progress.Ct);
-            using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct);
+            await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct).ConfigureAwait(false);
+            await client.AuthenticateAsync(account.Username, account.Password, progress.Ct).ConfigureAwait(false);
+            using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct).ConfigureAwait(false);
 
-            var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct);
+            var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct).ConfigureAwait(false);
             try
             {
                 foreach (var folder in folders)
@@ -45,9 +45,9 @@ namespace SimpleMailArchiver.Data
 
                     progress.CurrentFolder = folder.FullName;
 
-                    var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct);
-                    var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct);
-                    var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct);
+                    var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct).ConfigureAwait(false);
+                    var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct).ConfigureAwait(false);
+                    var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct).ConfigureAwait(false);
                     var messageToDeleteIds = new List<UniqueId>();
                     var messagesOnServer = new List<string>();
 
@@ -63,7 +63,7 @@ namespace SimpleMailArchiver.Data
                         {
                             Date = (DateTimeOffset)messageSummary.InternalDate!
                         };
-                        var headerMsg = await MailMessage.Construct(hmsg, archiveFolder, progress.Ct);
+                        var headerMsg = await MailMessage.Construct(hmsg, archiveFolder, progress.Ct).ConfigureAwait(false);
                         progress.ParsedMessageCount++;
 
                         // mark message to be deleted if meets the deletion date.
@@ -74,7 +74,7 @@ namespace SimpleMailArchiver.Data
                             messagesOnServer.Add(headerMsg.Hash);
 
                         // check if message is already in archive
-                        var existingMsg = await context.MailMessages.FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, progress.Ct);
+                        var existingMsg = await context.MailMessages.FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, progress.Ct).ConfigureAwait(false);
                         if (existingMsg != null)
                         {
                             // check if message is now in different folder on the server
@@ -91,26 +91,30 @@ namespace SimpleMailArchiver.Data
                             continue;
                         }
                                       
-                        using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct);
+                        using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct).ConfigureAwait(false);
                         msg.Date = (DateTimeOffset)messageSummary.InternalDate;
-                        var mmsg = await MailMessage.Construct(msg, archiveFolder, progress.Ct);
+                        var mmsg = await MailMessage.Construct(msg, archiveFolder, progress.Ct).ConfigureAwait(false);
 
                         progress.Ct.ThrowIfCancellationRequested();
 
                         // don't pass CancellationToken to those two awaits - makes sure that state consitend even in case of cancellation.
                         var addDbTask = context.AddAsync(mmsg);
                         var WriteToDiskTask = msg.WriteToAsync(ParseMailMessage.MailSavePath(mmsg));
-                        await addDbTask;
-                        await WriteToDiskTask;
-                        await context.SaveChangesAsync(progress.Ct);
+                        await addDbTask.ConfigureAwait(false);
+                        await WriteToDiskTask.ConfigureAwait(false);
+                        await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
                         progress.ImportedMessageCount++;
                     }
 
                     // delete messages marked for deletion.
                     if (messageToDeleteIds.Count > 0)
                     {
-                        await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
-                        await folder.ExpungeAsync(progress.Ct);
+#if DEBUG
+                        Program.Logger.LogInformation("Debug mode, not deleting on server");
+#else
+                        await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct).ConfigureAwait(false);
+                        await folder.ExpungeAsync(progress.Ct).ConfigureAwait(false);
+#endif
                         progress.RemoteMessagesDeletedCount += messageToDeleteIds.Count;
                     }
 
@@ -129,7 +133,7 @@ namespace SimpleMailArchiver.Data
             }
             finally
             {
-                await context.SaveChangesAsync(progress.Ct);
+                await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
                 Program.ImportRunning = false;
                 Program.Logger.LogInformation("Finished import from server");
             }
