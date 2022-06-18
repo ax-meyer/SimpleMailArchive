@@ -42,8 +42,6 @@ namespace SimpleMailArchiver
 
             var app = builder.Build();
 
-            app.UseHttpsRedirection();
-
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -51,8 +49,6 @@ namespace SimpleMailArchiver
             app.MapControllers();
             app.MapBlazorHub();
             app.MapFallbackToPage("/_Host");
-
-            app.UseRequestLocalization(builder.Configuration.GetValue<string>("Localization"));
 
             DatabaseService.Initialize(app.Services);
             ContextFactory = app.Services.GetService<IDbContextFactory<ArchiveContext>>()!;
