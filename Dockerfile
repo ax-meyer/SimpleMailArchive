@@ -6,7 +6,7 @@ COPY ./SimpleMailArchiver ./
 # Restore as distinct layers
 RUN dotnet restore
 # Build and publish a release
-RUN dotnet publish --runtime alpine-x64 -c Release -o out 
+RUN dotnet publish --runtime alpine-x64 -c Release -o out --no-self-contained
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
