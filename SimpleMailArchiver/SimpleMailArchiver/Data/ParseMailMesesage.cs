@@ -27,17 +27,5 @@ namespace SimpleMailArchiver.Data
             }
             return hex;
         }
-
-        public static string MailSavePath(MailMessage message!!)
-        {            
-            string path = Program.Config.ArchiveBasePath.Trim();
-            if (path.Length > 0) { path = path.TrimEnd('/') + "/"; }
-            path += message.Folder.TrimEnd('/');
-            path += "/";
-            Directory.CreateDirectory(path);
-            path += message.Hash;
-            path += ".eml";
-            return path;
-        }
 	}
 }

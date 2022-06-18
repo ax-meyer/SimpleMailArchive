@@ -32,7 +32,7 @@ public static partial class ImportMessages
                 progress.Ct.ThrowIfCancellationRequested();
 
                 var dbTask = context.AddAsync(mmsg);
-                var fileTask = msg.WriteToAsync(ParseMailMessage.MailSavePath(mmsg));
+                var fileTask = msg.WriteToAsync(mmsg.EmlPath);
                 await dbTask.ConfigureAwait(false);
                 await fileTask.ConfigureAwait(false);
                 await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);

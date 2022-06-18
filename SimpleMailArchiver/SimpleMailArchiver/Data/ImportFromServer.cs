@@ -99,7 +99,7 @@ namespace SimpleMailArchiver.Data
 
                         // don't pass CancellationToken to those two awaits - makes sure that state consitend even in case of cancellation.
                         var addDbTask = context.AddAsync(mmsg);
-                        var WriteToDiskTask = msg.WriteToAsync(ParseMailMessage.MailSavePath(mmsg));
+                        var WriteToDiskTask = msg.WriteToAsync(mmsg.EmlPath);
                         await addDbTask.ConfigureAwait(false);
                         await WriteToDiskTask.ConfigureAwait(false);
                         await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
