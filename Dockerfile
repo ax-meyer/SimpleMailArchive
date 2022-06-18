@@ -6,7 +6,7 @@ COPY ./SimpleMailArchiver ./
 # Restore as distinct layers
 RUN dotnet restore
 # Build and publish a release
-RUN dotnet publish --runtime alpine-x64 -c Release --self-contained true -o oout /p:PublishSingleFile=true /p:PublishTrimmed=true
+RUN dotnet publish --runtime alpine-x64 -c Release --self-contained true -o oout /p:PublishSingleFile=true
 
 # Build runtime image
 FROM alpine:3.9.4
