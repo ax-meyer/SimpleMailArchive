@@ -63,7 +63,7 @@ I don't know. I curently have around 18.000 emails in my personal archive and it
 ### What about multi user support?
 Currently, there is no concept of users in the app. You can add multiple accounts to archive from, and if you configure them to go into their own respective folders in the settings, e-mails from specific accounts can be filtered. But there is no way to restrict someone from seeing all emails from all accounts.
 
-For a few users, it is still feasible to just spin up one instance of this app per user. Be aware however that with a large number of mails, the memory footprint of the app can become more significant due to database caching. My personal archive has aorund 18.000 emails at the moment and the running application (as docker container) takes about 400MB of RAM.
+For a few users, it is still feasible to just spin up one instance of this app per user. Be aware however that with a large number of mails, the memory footprint of the app can become more significant due to database caching. My personal archive has aorund 18.000 emails at the moment and the running application (as docker container) takes about 800MB of RAM if not restricted. You can restrict the memory available to the docker container, and for me, 300MB are enough, it just means the database keeps less in RAM and has to read more from the disk. Anything less than 300MB risks crashing during import, so I wouldn't recommend it.
 
 ### I would like to see feature X
 Feel free to open an issue. At the moment, this project is just for my personal use, so I only implement what I need. If there is interest from others (like your reading this) I will see what I can add with reasonable effort.
