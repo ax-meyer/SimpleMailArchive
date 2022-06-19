@@ -1,11 +1,14 @@
-﻿using System;
-namespace SimpleMailArchiver.Data
+﻿namespace SimpleMailArchiver.Data
 {
 	public static class Cleanup
 	{
-		private static async Task RecalculateHashes(CancellationToken token = default)
+        /// <summary>
+        /// WARNING: NOT TESTED YET
+        /// </summary>
+        /// <returns></returns>
+        private static async Task RecalculateHashes(CancellationToken token = default)
         {
-			var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
+			using var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
 			int count = 0;
 			foreach(var message in context.MailMessages)
             {
@@ -21,7 +24,7 @@ namespace SimpleMailArchiver.Data
         /// <returns></returns>
 		private static async Task RemoveDuplicates()
         {
-            var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
+            using var context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
 			var duplicates = context.MailMessages.GroupBy(i => i.Hash)
                      .Where(x => x.Count() > 1)
                      .Select(val => val.Key);

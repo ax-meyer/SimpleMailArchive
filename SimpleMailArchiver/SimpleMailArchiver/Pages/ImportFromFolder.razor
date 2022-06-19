@@ -5,6 +5,7 @@
 @using SimpleMailArchiver.Data;
 @using SimpleMailArchiver.Shared;
 @using MimeKit;
+@using System.Diagnostics;
 
 <h1>Import mail from folder on server</h1>
 
@@ -67,27 +68,42 @@
 
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
 
+        var watch = new Stopwatch();
+        string fmt = @"hh\:mm\:ss";
+
         try
         {
-            Program.ImportProgress.InfoMessage = "Import running, please wait...";
+            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
+            watch.Start();
 
             var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, Program.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
+                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
                 await InvokeAsync(StateHasChanged).ConfigureAwait(false);
                 Thread.Sleep(1000);
             }
 
-            if (!Program.ImportProgress.Ct.IsCancellationRequested)
-                Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
-            else
-                Program.ImportProgress.InfoMessage = "Import was cancelled.";
+            await mailTask.ConfigureAwait(false);
 
+            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
         }
         catch (OperationCanceledException)
         {
-            Program.ImportProgress.InfoMessage = "Import was cancelled.";
+            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
+        }
+        catch (InvalidDataException)
+        {
+            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
+        }
+        catch (ArgumentException ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
         }
         finally
         {

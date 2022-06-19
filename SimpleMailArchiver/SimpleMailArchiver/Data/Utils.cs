@@ -19,7 +19,7 @@ namespace SimpleMailArchiver.Data
             byte[] encodedMessage = Encoding.UTF8.GetBytes(strData);
             using var alg = SHA256.Create();
             string hex = "";
-
+            
             var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token).ConfigureAwait(false);
             foreach (byte x in hashValue)
             {
@@ -40,7 +40,7 @@ namespace SimpleMailArchiver.Data
             await context.AddAsync(mailMessage).ConfigureAwait(false);
             await context.SaveChangesAsync().ConfigureAwait(false);
             var msgFromDb = await context.MailMessages.Where(m => m.Hash == mailMessage.Hash).FirstAsync().ConfigureAwait(false);
-
+            
             Directory.CreateDirectory(Path.GetDirectoryName(msgFromDb.EmlPath));
             await mimeMessage.WriteToAsync(msgFromDb.EmlPath).ConfigureAwait(false);
             return true;

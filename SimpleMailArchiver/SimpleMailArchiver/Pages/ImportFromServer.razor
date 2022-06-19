@@ -9,6 +9,7 @@
 @using MailKit.Security;
 @using MailKit.Net.Imap;
 @using MimeKit;
+@using System.Diagnostics;
 
 <h1>Import from mailserver</h1>
 
@@ -74,40 +75,42 @@
 
         await InvokeAsync(StateHasChanged).ConfigureAwait(false);
 
+        var watch = new Stopwatch();
+        string fmt = @"hh\:mm\:ss";
+
         try
         {
-            Program.ImportProgress.InfoMessage = "Import running, please wait...";
+            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
             if (selectedAccountFilename == null)
                 throw new ArgumentException("No valid account selected.");
 
+            watch.Start();
             var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
+                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
                 await InvokeAsync(StateHasChanged).ConfigureAwait(false);
                 Thread.Sleep(1000);
             }
-
-            if (!Program.ImportProgress.Ct.IsCancellationRequested)
-                Program.ImportProgress.InfoMessage = $"Import finished at {DateTime.Now.ToShortTimeString()}";
-            else
-                Program.ImportProgress.InfoMessage = "Import was cancelled.";
+            await mailTask.ConfigureAwait(false);
+            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
         }
         catch (OperationCanceledException)
         {
-            Program.ImportProgress.InfoMessage = "Import was cancelled.";
+            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
         }
         catch (InvalidDataException)
         {
-            Program.ImportProgress.InfoMessage = "INTERNAL ERROR! Hash Mismatch";
+            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
         }
         catch (ArgumentException ex)
         {
-            Program.ImportProgress.InfoMessage = $"Error: {ex.Message}";
+            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
         }
         catch (Exception ex)
         {
-            Program.ImportProgress.InfoMessage = $"Unexpected Error: {ex.Message}";
+            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
         }
         finally
         {

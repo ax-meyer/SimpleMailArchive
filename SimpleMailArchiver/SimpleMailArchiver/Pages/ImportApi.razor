@@ -26,7 +26,16 @@
 
             Program.Logger.LogInformation($"callback url: \"{callBackUrl}\"");
 
-            await client.GetAsync(callBackUrl + "/start").ConfigureAwait(false);
+            try
+            {
+                await client.GetAsync(callBackUrl + "/start").ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Program.Logger.LogError($"Calling {callBackUrl} failed with error {ex.Message}");
+                Program.ImportRunning = false;
+                return;
+            }
         }
         else
             Program.Logger.LogInformation("No callback url found");
@@ -50,7 +59,9 @@
                         $"\nImported : {progress.ImportedMessageCount}" +
                         $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
                         $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
-                    await client.PostAsync(callBackUrl, new StringContent(msg)).ConfigureAwait(false);
+
+                    if (callBackUrl != string.Empty)
+                        await client.PostAsync(callBackUrl, new StringContent(msg)).ConfigureAwait(false);
                     Program.Logger.LogInformation(msg);
                 }
                 catch (Exception ex)
@@ -82,6 +93,8 @@
             if (callBackUrl != string.Empty)
                 await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
         }
+
+        Program.ImportRunning = false;
 
     }
     }

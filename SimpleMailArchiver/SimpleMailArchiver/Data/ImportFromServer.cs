@@ -19,6 +19,7 @@ namespace SimpleMailArchiver.Data
             using var client = new ImapClient();
             await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct).ConfigureAwait(false);
             await client.AuthenticateAsync(account.Username, account.Password, progress.Ct).ConfigureAwait(false);
+
             using var context = await Program.ContextFactory.CreateDbContextAsync(progress.Ct).ConfigureAwait(false);
 
             var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct).ConfigureAwait(false);
@@ -87,6 +88,7 @@ namespace SimpleMailArchiver.Data
                                 var dirName = Path.GetDirectoryName(newEmlPath);
                                 Directory.CreateDirectory(dirName!);
                                 File.Move(oldEmlPath, newEmlPath);
+                                await context.SaveChangesAsync().ConfigureAwait(false);
                             }
                             continue;
                         }
@@ -121,16 +123,17 @@ namespace SimpleMailArchiver.Data
                             foreach (var emlPath in msgsToDelete.Select(msg => msg.EmlPath))
                                 File.Delete(emlPath);
                             context.MailMessages.RemoveRange(msgsToDelete);
+                            await context.SaveChangesAsync().ConfigureAwait(false);
                             progress.LocalMessagesDeletedCount += msgsToDelete.Length;
                         }
                     }
                 }
+                Program.Logger.LogInformation("Finished import from server");
             }
             finally
             {
                 await context.SaveChangesAsync(progress.Ct).ConfigureAwait(false);
                 Program.ImportRunning = false;
-                Program.Logger.LogInformation("Finished import from server");
             }
         }
 	}
