@@ -28,7 +28,7 @@
 
             try
             {
-                await client.GetAsync(callBackUrl + "/start").ConfigureAwait(false);
+                await HttpGetRetry(client, callBackUrl + "/start", 10, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -48,7 +48,6 @@
 
             if (Program.Config.Accounts.Any(acc => acc.AccountFilename == accountFilename))
             {
-
                 try
                 {
                     var progress = new ImportProgress();
@@ -61,7 +60,7 @@
                         $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
 
                     if (callBackUrl != string.Empty)
-                        await client.PostAsync(callBackUrl, new StringContent(msg)).ConfigureAwait(false);
+                        await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None).ConfigureAwait(false);
                     Program.Logger.LogInformation(msg);
                 }
                 catch (Exception ex)
@@ -70,7 +69,7 @@
                     Program.Logger.LogError(errmsg);
 
                     if (callBackUrl != string.Empty)
-                        await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
+                        await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -82,7 +81,7 @@
                 var errmsg = $"No account found for \"{accountFilename}\". Check log at startup to see account loading errors";
                 Program.Logger.LogError(errmsg);
                 if (callBackUrl != string.Empty)
-                    await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
+                    await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
             }
         }
         else
@@ -91,10 +90,49 @@
             Program.Logger.LogError(errmsg);
 
             if (callBackUrl != string.Empty)
-                await client.PostAsync(callBackUrl + "/fail", new StringContent(errmsg)).ConfigureAwait(false);
+                await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
         }
 
         Program.ImportRunning = false;
 
     }
+
+    private async Task HttpGetRetry(HttpClient client, string url, int retries, CancellationToken token = default)
+    {
+        int counter = 0;
+        bool retry = true;
+        while(retry)
+        {
+            try
+            {
+                await client.GetAsync(url, token).ConfigureAwait(false);
+                retry = false;
+            }
+            catch
+            {
+                if (++counter >= retries)
+                    throw;
+            }
+        }
+    }
+
+    private async Task HttpPostRetry(HttpClient client, string url, string message, int retries, CancellationToken token = default)
+    {
+        int counter = 0;
+        bool retry = true;
+        while (retry)
+        {
+            try
+            {
+                await client.PostAsync(url, new StringContent(message), token).ConfigureAwait(false);
+                retry = false;
+            }
+            catch
+            {
+                if (++counter >= retries)
+                    throw;
+            }
+        }
+    }
+
     }

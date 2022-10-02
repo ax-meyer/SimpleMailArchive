@@ -42,8 +42,10 @@ public partial class MailMessage : IEquatable<MailMessage>
 
     public MailMessage() { }
 
-    public static async Task<MailMessage> Construct(MimeMessage mimeMessage!!, string folder, CancellationToken token = default)
+    public static async Task<MailMessage> Construct(MimeMessage mimeMessage, string folder, CancellationToken token = default)
     {
+        if (mimeMessage == null) throw new ArgumentNullException(nameof(mimeMessage));
+
         // generate list of attachment filenames
         List<string> attachment_names = new();
         attachment_names.AddRange(mimeMessage.Attachments.Select(attachment => attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));

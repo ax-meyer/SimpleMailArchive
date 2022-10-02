@@ -7,8 +7,9 @@ namespace SimpleMailArchiver.Data
 {
 	public class Utils
 	{
-		public static async Task<string> CreateMailHash(MailMessage message!!, CancellationToken token = default)
+		public static async Task<string> CreateMailHash(MailMessage message, CancellationToken token = default)
         {
+            if (message == null) throw new ArgumentNullException(nameof(message));
             var strData = message.Date.ToString("dd.MM.yyyy-HH:mm:ss");
             strData += message.Subject;
             strData += message.Sender.ToString();

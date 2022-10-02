@@ -150,8 +150,9 @@
         return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
     }
 
-    private void DisplayMessage(MailMessage message!!)
+    private void DisplayMessage(MailMessage message)
     {
+        if (message == null) throw new ArgumentNullException(nameof(message));
         selectedMessage = message;
         showMessage = true;
     }
