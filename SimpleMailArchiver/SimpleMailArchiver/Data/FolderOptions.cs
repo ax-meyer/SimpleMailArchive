@@ -1,23 +1,18 @@
-﻿using System;
-namespace SimpleMailArchiver.Data;
+﻿namespace SimpleMailArchiver.Data;
 
 [Serializable]
 public class FolderOptions
 {
-    public FolderOptions()
-    {
-    }
-
     /// <summary>
     /// Name of the folder on the server. Required.
     /// </summary>
-    public string Name { get; init; } = "";
+    public required string Name { get; init; }
 
     /// <summary>
     /// Folder path in the archive. If empty, <see cref="Name"/> will be used.
-    /// Usefull to e.g. consolidate multiple accounts into a single folder structure.
+    /// Useful to e.g. consolidate multiple accounts into a single folder structure.
     /// </summary>
-    public string NameInArchive { get; init; } = "";
+    public string? NameInArchive { get; init; }
 
     /// <summary>
     /// If true, folder will be excluded from archiving.
@@ -28,7 +23,7 @@ public class FolderOptions
     /// If not null, overrides the account setting for DeleteAfterDays. Negative values mean no deletion.
     /// E-Mails will be deleted on the server after this period of time.
     /// </summary>
-    public int? DeleteAfterDays { get; init; } = null;
+    public int? DeleteAfterDays { get; init; }
 
     /// <summary>
     /// Archived folder will mirror the server folder - deletions on server are mirrored in the archive!

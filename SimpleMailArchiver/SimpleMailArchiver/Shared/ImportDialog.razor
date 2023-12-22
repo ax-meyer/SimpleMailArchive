@@ -1,11 +1,5 @@
-﻿@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Pages;
-@using Microsoft.EntityFrameworkCore;
-@using System.IO;
-@using System;
-@using Microsoft.AspNetCore.Hosting;
-@using System.Text.Json;
-@inject IJSRuntime JSRuntime;
+﻿@using SimpleMailArchiver.Data
+@inject IJSRuntime JsRuntime;
 
 <div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
      aria-modal="true" role="dialog">
@@ -46,7 +40,7 @@
 
 @code{
     [Parameter]
-    public ImportProgress Progress { get; set; }
+    public required ImportProgress Progress { get; set; }
 
     [Parameter]
     public EventCallback<bool> OnCancel { get; set; }

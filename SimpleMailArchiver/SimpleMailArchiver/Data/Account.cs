@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace SimpleMailArchiver.Data;
 
@@ -9,27 +10,31 @@ public class Account
     /// List of folders that should be treated special in some way.
     /// Any folder not in here will be archived with default settings.
     /// </summary>
-    public List<FolderOptions> FolderOptions { get; set; } = new List<FolderOptions>();
+    public List<FolderOptions>? FolderOptions { get; set; }
 
     /// <summary>
     /// Name of the account to display in the GUI.
     /// </summary>
-    public string AccountDisplayName { get; init; } = "";
+    [Required]
+    public required string AccountDisplayName { get; init; }
 
     /// <summary>
     /// Username for login
     /// </summary>
-    public string Username { get; init; } = "";
+    [Required]
+    public required string Username { get; init; }
 
     /// <summary>
     /// Password for login
     /// </summary>
-    public string Password { get; init; } = "";
+    [Required]
+    public required string Password { get; init; }
 
     /// <summary>
     /// URL to IMAP server
     /// </summary>
-    public string ImapUrl { get; init; } = "";
+    [Required]
+    public required string ImapUrl { get; init; }
 
     /// <summary>
     /// Messages will be deleted on the server after this amount of days.
@@ -40,28 +45,23 @@ public class Account
 
     /// <summary>
     /// Base bath in the archive for this account. With this option, emails from multiple accounts can be separated.
-    /// CAREFUL: This is just a separation in the folder structure - all emails will still be accessible through the webiste, at the moment there is no way to use a single instance for multiple users who shall not see all emails in the archive.
+    /// CAREFUL: This is just a separation in the folder structure - all emails will still be accessible through the website, at the moment there is no way to use a single instance for multiple users who shall not see all emails in the archive.
     /// </summary>
-    public string BasePathInArchive { get; init; } = "";
-
-
-    public Account()
-    {
-    }
-
-    private bool accountReadonly = false;
-    private string accountFilename = "";
+    public string? BasePathInArchive { get; init; }
+    
+    private bool _accountReadonly;
+    private string _accountFilename = "";
 
     [JsonIgnore]
     public string AccountFilename
     {
-        get => accountFilename;
+        get => _accountFilename;
         set
         {
-            if (accountReadonly)
+            if (_accountReadonly)
                 throw new Exception("Account cannot be modified after loading.");
-            accountFilename = value;
-            accountReadonly = true;
+            _accountFilename = value;
+            _accountReadonly = true;
         }
     }
 }

@@ -1,11 +1,9 @@
-﻿@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Pages;
-@using Microsoft.EntityFrameworkCore;
-@using System.IO;
-@using System;
-@using Microsoft.AspNetCore.Hosting;
-@using System.Text.Json;
-@inject IJSRuntime JSRuntime;
+﻿@using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Pages
+@using System.Text.Json
+@using SimpleMailArchiver.Services
+@inject FileDownloadHelperContext DownloadHelperContext;
+@inject IJSRuntime JsRuntime;
 
 <div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
      aria-modal="true" role="dialog">
@@ -26,26 +24,26 @@
                         <td>To</td>
                         <td>@Message.Recipient</td>
                     </tr>
-                    @if (Message.CC_recipient.Trim() != string.Empty)
+                    @if (Message.CcRecipient?.Trim() != string.Empty)
                     {
                         <tr>
                             <td>CC</td>
-                            <td>@Message.CC_recipient</td>
+                            <td>@Message.CcRecipient</td>
                         </tr>
                     }
-                    @if (Message.BCC_recipient.Trim() != string.Empty)
+                    @if (Message.BccRecipient?.Trim() != string.Empty)
                     {
                         <tr>
                             <td>BCC</td>
-                            <td>@Message.BCC_recipient</td>
+                            <td>@Message.BccRecipient</td>
                         </tr>
                     }
-                    @if (Message.Attachments.Trim() != "[]")
+                    @if (Message.Attachments?.Trim() != "[]")
                     {
                         <tr>
                             <td>Attachments:</td>
                             <td>
-                                @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments))
+                                @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments!)!)
                                 {
                                     @attachment <br />
                                 }
@@ -54,14 +52,8 @@
                     }
                 </table>
                 <br /><br />
-                @if (Message.HtmlBody != null)
-                {
-                    @((MarkupString)Message.HtmlBody)
-                }
-                @if (Message.TextBody != null)
-                {
-                    @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
-                }
+                @((MarkupString)Message.HtmlBody)
+                @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
             </div>
         </div>
     </div>
@@ -69,7 +61,7 @@
 
 @code{
     [Parameter]
-    public MailMessage Message { get; set; } = new();
+    public required MailMessage Message { get; set; }
 
     [Parameter]
     public EventCallback<bool> OnClose { get; set; }
@@ -77,8 +69,8 @@
 
     private async Task Download()
     {
-        await FileDownloadsModel.PrepareMessageForDownload(Message).ConfigureAwait(false);
-        await JSRuntime.InvokeAsync<object>("open", "download", "_blank").ConfigureAwait(false);
+        await DownloadHelperContext.PrepareMessageForDownload(Message);
+        await JsRuntime.InvokeAsync<object>("open", "download", "_blank");
     }
 
     protected override void OnInitialized()

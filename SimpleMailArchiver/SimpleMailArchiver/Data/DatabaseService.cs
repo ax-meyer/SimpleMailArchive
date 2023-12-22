@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+
 namespace SimpleMailArchiver.Data
 {
     public class DatabaseService

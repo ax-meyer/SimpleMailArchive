@@ -1,8 +1,6 @@
-﻿using System.Text.Json;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using MimeKit;
-using System.Diagnostics.CodeAnalysis;
 
 namespace SimpleMailArchiver.Data;
 
@@ -19,103 +17,120 @@ public enum TableHeader
     Attachments
 }
 
-public partial class MailMessage : IEquatable<MailMessage>
+public class MailMessage : IEquatable<MailMessage>
 {
+    public long Id { get; init; }
+    [Required] public required string Hash { get; set; }
+    [Required] public required string Subject { get; init; }
+    [Required] public required string Sender { get; init; }
+    [Required] public required string Recipient { get; init; }
+    public string? CcRecipient { get; init; }
+    public string? BccRecipient { get; init; }
+    [Required] public required DateTime Date { get; init; }
+    public string? Attachments { get; init; }
+    [Required] public required string Folder { get; set; }
+    [Required] public required string TextBody { get; init; }
+    [Required] public required string HtmlBody { get; init; }
 
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public long ID { get; set; }
-    public string Hash { get; set; }
-    public string Subject { get; set; }
-    public string Sender { get; set; }
-    public string Recipient { get; set; }
-    public string CC_recipient { get; set; }
-    public string BCC_recipient { get; set; }
-    public DateTime Date { get; set; }
-    public string Attachments { get; set; }
-    public string Folder { get; set; }
-    public string TextBody { get; set; }
-    public string HtmlBody { get; set; }
-
-    [NotMapped]
-    public string EmlPath => (Program.Config.ArchiveBasePath + "/" + Folder + "/message-" + ID.ToString() + ".eml").Replace("//", "/");
-
-    public MailMessage() { }
-
-    public static async Task<MailMessage> Construct(MimeMessage mimeMessage, string folder, CancellationToken token = default)
+    public override bool Equals(object? obj)
     {
-        if (mimeMessage == null) throw new ArgumentNullException(nameof(mimeMessage));
+        if (obj is null)
+            return false;
 
-        // generate list of attachment filenames
-        List<string> attachment_names = new();
-        attachment_names.AddRange(mimeMessage.Attachments.Select(attachment => attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
-        
-        foreach (var part in mimeMessage.BodyParts)
-        {
-            if (part.ContentDisposition != null && part.ContentDisposition.FileName != null)
-            {
-                var name = part.ContentDisposition.FileName;
-                if (!attachment_names.Contains(name))
-                    attachment_names.Add(name);
-            }
-            else if (part.ContentType != null && part.ContentType.Name != null)
-            {
-                var name = part.ContentType.Name;
-                if (!attachment_names.Contains(name))
-                    attachment_names.Add(part.ContentType.Name);
-            }
-        }
-
-        var msg = new MailMessage()
-        {
-            Subject = mimeMessage.Subject,
-            Sender = mimeMessage.From.ToString(),
-            Recipient = mimeMessage.To.ToString(),
-            CC_recipient = mimeMessage.Cc.ToString(),
-            BCC_recipient = mimeMessage.Bcc.ToString(),
-            Date = mimeMessage.Date.DateTime,
-            Attachments = JsonSerializer.Serialize(attachment_names),
-            Folder = folder,
-            TextBody = mimeMessage.TextBody,
-            HtmlBody = mimeMessage.HtmlBody
-        };
-
-        msg.Hash = await Utils.CreateMailHash(msg, token).ConfigureAwait(false);
-        return msg;
-    }
-
-    public override bool Equals(object obj)
-    {
         if (obj is MailMessage other)
         {
             bool equal = true;
-            foreach (var prop in this.GetType().GetProperties())
+            foreach (var prop in GetType().GetProperties())
             {
-                if (prop.Name == nameof(MailMessage.ID) || prop.Name == nameof(MailMessage.EmlPath))
-                    continue;
-                else if (prop.Name == nameof(MailMessage.Date))
+                switch (prop.Name)
                 {
-                    DateTime first = this.Date;
-                    DateTime second = other.Date;
-                    string fmt = "dd.MM.yyyy-HH:mm:ss";
-                    equal = first.ToString(fmt) == second.ToString(fmt);
+                    case nameof(Id):
+                        continue;
+                    case nameof(Date):
+                    {
+                        DateTime first = Date;
+                        DateTime second = other.Date;
+                        string fmt = "dd.MM.yyyy-HH:mm:ss";
+                        equal = first.ToString(fmt) == second.ToString(fmt);
+                        break;
+                    }
+                    default:
+                        equal = prop.GetValue(this) == prop.GetValue(other);
+                        break;
                 }
-                else
-                    equal = prop.GetValue(this) == prop.GetValue(other);
             }
+
             return equal;
         }
-        else
-            throw new InvalidDataException();
+
+        throw new InvalidDataException();
     }
 
-    public bool Equals(MailMessage other)
+    public bool Equals(MailMessage? other)
     {
+        if (other is null)
+            return false;
         return Equals((object)other);
     }
 
     public override int GetHashCode()
     {
         throw new NotImplementedException();
+    }
+}
+
+public static class MailParser
+{
+    public static async Task<MailMessage> Construct(MimeMessage mimeMessage, string folder,
+        CancellationToken token = default)
+    {
+        if (mimeMessage == null) throw new ArgumentNullException(nameof(mimeMessage));
+
+        // generate list of attachment filenames
+        List<string> attachmentNames = new();
+        attachmentNames.AddRange(mimeMessage.Attachments.Select(attachment =>
+            attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
+
+        foreach (var part in mimeMessage.BodyParts)
+        {
+            if (part.ContentDisposition != null && part.ContentDisposition.FileName != null)
+            {
+                var name = part.ContentDisposition.FileName;
+                if (!attachmentNames.Contains(name))
+                    attachmentNames.Add(name);
+            }
+            else if (part.ContentType != null && part.ContentType.Name != null)
+            {
+                var name = part.ContentType.Name;
+                if (!attachmentNames.Contains(name))
+                    attachmentNames.Add(part.ContentType.Name);
+            }
+        }
+
+        var subject = mimeMessage.Subject;
+        var sender = mimeMessage.From.ToString();
+        var recipient = mimeMessage.To.ToString();
+        var ccRecipient = mimeMessage.Cc.ToString();
+        var bccRecipient = mimeMessage.Bcc.ToString();
+        var date = mimeMessage.Date.DateTime;
+        var hash = await MailMessageHelperService
+            .CreateMailHash(date, subject, sender, recipient, ccRecipient, bccRecipient, token);
+
+        var msg = new MailMessage
+        {
+            Subject = subject,
+            Sender = sender,
+            Recipient = recipient,
+            CcRecipient = ccRecipient,
+            BccRecipient = bccRecipient,
+            Date = date,
+            Attachments = JsonSerializer.Serialize(attachmentNames),
+            Folder = folder,
+            TextBody = mimeMessage.TextBody,
+            HtmlBody = mimeMessage.HtmlBody,
+            Hash = hash
+        };
+
+        return msg;
     }
 }

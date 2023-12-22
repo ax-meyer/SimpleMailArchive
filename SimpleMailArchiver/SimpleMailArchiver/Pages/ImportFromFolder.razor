@@ -1,114 +1,118 @@
 ﻿@page "/import-folder"
+@using SimpleMailArchiver.Services.MessageImportService
+@using System.Diagnostics
+@using SimpleMailArchiver.Data
+@inject ILoggerFactory LoggerFactory;
+@inject MessageImportService MessageImportService;
+@inject ApplicationContext AppContext;
+
 
 <PageTitle>Import mail from local folder</PageTitle>
 
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using MimeKit;
-@using System.Diagnostics;
-
 <h1>Import mail from folder on server</h1>
 
-<p>This will import emails from a folder with .eml files mounted to the @Program.Config.ImportBasePath in the docker container.</p>
+<p>This will import emails from a folder with .eml files mounted to the @AppContext.PathConfig.ImportBasePath in the docker container.</p>
 
-<p>Root folder name for the import in archive: <input id="rootimportpath" @bind-value="rootimportpath"></p>
+<p>Root folder name for the import in archive: <input id="rootImportPath" @bind-value="_rootImportPath"></p>
 <p>The path the root folder in the archive the import folder will be mapped to.</p>
 <p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
 
 <p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@Program.ImportRunning">Import from folder</button>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@AppContext.ImportRunning">Import from folder</button>
     <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
 </p>
 
-<p role="status">@Program.ImportProgress.InfoMessage</p>
+<p role="status">@AppContext.ImportProgress?.InfoMessage</p>
 <table class="table-responsive">
     <tr>
         <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.CurrentFolder</td>
     </tr>
     <tr>
         <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ParsedMessageCount</td>
     </tr>
     <tr>
         <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ImportedMessageCount</td>
     </tr>
 </table>
 
-@if (Program.ImportRunning)
+@if (AppContext.ImportRunning)
 {
-    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
+    <ImportDialog Progress="@AppContext.ImportProgress" OnCancel="@Cancel" />
 }
 
 
 @code {
-    private CancellationTokenSource ctSource;
+    private CancellationTokenSource? _ctSource;
 
-    private void Cancel() => ctSource?.Cancel();
-    private string rootimportpath = "inbox/";
+    private void Cancel() => _ctSource?.Cancel();
+    private string _rootImportPath = "inbox/";
 
     private async Task ImportFolder()
     {
-        if (Program.ImportRunning)
+        if (AppContext.ImportRunning)
             return;
 
-        ctSource = new CancellationTokenSource();
-        Program.ImportProgress = new();
-        Program.ImportProgress.Ct = ctSource.Token;
-        var emlPaths = System.IO.Directory.GetFiles(Program.Config.ImportBasePath, "*.eml", SearchOption.AllDirectories);
+        _ctSource = new CancellationTokenSource();
+        AppContext.ImportProgress = new(LoggerFactory)
+        {
+            Ct = _ctSource.Token
+        };
+        var emlPaths = Directory.GetFiles(AppContext.PathConfig.ImportBasePath, "*.eml", SearchOption.AllDirectories);
 
         if (emlPaths.Length == 0)
         {
-            Program.ImportProgress.InfoMessage = $"No .eml files found for import in {Program.Config.ImportBasePath}";
+            AppContext.ImportProgress.InfoMessage = $"No .eml files found for import in {AppContext.PathConfig.ImportBasePath}";
             return;
         }
 
-        Program.ImportProgress.TotalMessageCount = emlPaths.Length;
+        AppContext.ImportProgress.TotalMessageCount = emlPaths.Length;
 
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        await InvokeAsync(StateHasChanged);
 
         var watch = new Stopwatch();
         string fmt = @"hh\:mm\:ss";
 
         try
         {
-            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
+            AppContext.ImportProgress.InfoMessage = "Import starting, please wait...";
             watch.Start();
 
-            var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, Program.ImportProgress);
+            var mailTask = MessageImportService.ImportFromFolder(emlPaths, AppContext.PathConfig.ImportBasePath, AppContext.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
-                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
-                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+                AppContext.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
+                await InvokeAsync(StateHasChanged);
                 Thread.Sleep(1000);
             }
 
-            await mailTask.ConfigureAwait(false);
+            await mailTask;
 
-            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
+            AppContext.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
         }
         catch (OperationCanceledException)
         {
-            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
+            AppContext.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
         }
         catch (InvalidDataException)
         {
-            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
+            AppContext.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
         }
         catch (ArgumentException ex)
         {
-            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
+            AppContext.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
         }
         catch (Exception ex)
         {
-            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
+            AppContext.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
         }
         finally
         {
-            Program.ImportRunning = false;
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            AppContext.ImportRunning = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 }

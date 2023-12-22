@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-#nullable disable
+﻿#nullable disable
+
+using Microsoft.EntityFrameworkCore;
 
 namespace SimpleMailArchiver.Data
 {
@@ -29,11 +30,11 @@ namespace SimpleMailArchiver.Data
             modelBuilder.Entity<MailMessage>(entity =>
             {
                 entity.ToTable("MailMessages");
-                entity.Property(e => e.ID).HasColumnName("ID");
+                entity.Property(e => e.Id).HasColumnName("ID");
                 entity.Property(e => e.Attachments).HasColumnName("ATTACHMENTS");
                 entity.Property(e => e.Recipient).HasColumnName("RECIPIENT");
-                entity.Property(e => e.BCC_recipient).HasColumnName("BCC_RECIPIENT");
-                entity.Property(e => e.CC_recipient).HasColumnName("CC_RECIPIENT");
+                entity.Property(e => e.BccRecipient).HasColumnName("BCC_RECIPIENT");
+                entity.Property(e => e.CcRecipient).HasColumnName("CC_RECIPIENT");
                 entity.Property(e => e.Folder).HasColumnName("FOLDER");
                 entity.Property(e => e.Hash).HasColumnName("HASH");
                 entity.Property(e => e.TextBody).HasColumnName("MESSAGE");

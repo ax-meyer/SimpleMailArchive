@@ -1,57 +1,62 @@
 ﻿@page "/import-api"
-
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using Microsoft.AspNetCore.WebUtilities;
+@using SimpleMailArchiver.Services.MessageImportService
+@using Microsoft.AspNetCore.WebUtilities
+@using SimpleMailArchiver.Data
+@inject ILoggerFactory LoggerFactory;
 @inject NavigationManager NavManager
+@inject MessageImportService MessageImportService;
+@inject ApplicationContext AppContext;
 
 
 @code {
-    protected async override void OnInitialized()
+     private ILogger<ImportApi>? _logger;
+
+    protected override async void OnInitialized()
     {
-        if (Program.ImportRunning)
+        _logger = LoggerFactory.CreateLogger<ImportApi>();
+        if (AppContext.ImportRunning)
             return;
-        Program.ImportRunning = true;
-        Program.Logger.LogInformation("Starting api import");
+        AppContext.ImportRunning = true;
+        _logger.LogInformation("Starting api import");
 
         var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
-        Program.Logger.LogInformation($"called URI \"{uri}\"");
+        _logger.LogInformation("called URI \\\"{Uri}\\\"", uri);
 
-        using var client = new System.Net.Http.HttpClient();
-        client.Timeout = System.TimeSpan.FromSeconds(10);
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(10);
         string callBackUrl = "";
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("callBackUrl", out var callback))
         {
             callBackUrl = callback.ToString().Trim().TrimEnd('/');
 
-            Program.Logger.LogInformation($"callback url: \"{callBackUrl}\"");
+            _logger.LogInformation("callback url: \\\"{CallBackUrl}\\\"", callBackUrl);
 
             try
             {
-                await HttpGetRetry(client, callBackUrl + "/start", 10, CancellationToken.None).ConfigureAwait(false);
+                await HttpGetRetry(client, callBackUrl + "/start", 10, CancellationToken.None);
             }
             catch (Exception ex)
             {
-                Program.Logger.LogError($"Calling {callBackUrl} failed with error {ex.Message}");
-                Program.ImportRunning = false;
+                _logger.LogError($"Calling {callBackUrl} failed with error {ex.Message}");
+                AppContext.ImportRunning = false;
                 return;
             }
         }
         else
-            Program.Logger.LogInformation("No callback url found");
+            _logger.LogInformation("No callback url found");
 
 
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accountFilename", out var filename))
         {
             string accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
-            Program.Logger.LogInformation($"API import for account file: \"{accountFilename}\"");
+            _logger.LogInformation($"API import for account file: \"{accountFilename}\"");
 
-            if (Program.Config.Accounts.Any(acc => acc.AccountFilename == accountFilename))
+            if (AppContext.Accounts.Any(acc => acc.AccountFilename == accountFilename))
             {
                 try
                 {
-                    var progress = new ImportProgress();
-                    await ImportMessages.ImportFromServer(accountFilename, progress).ConfigureAwait(false);
+                    var progress = new ImportProgress(LoggerFactory);
+                    await MessageImportService.ImportFromServer(accountFilename, progress);
 
                     var msg = $"Import successful. Account {accountFilename}" +
                         $"\nParsed: {progress.ParsedMessageCount}" +
@@ -60,40 +65,40 @@
                         $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
 
                     if (callBackUrl != string.Empty)
-                        await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None).ConfigureAwait(false);
-                    Program.Logger.LogInformation(msg);
+                        await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None);
+                    _logger.LogInformation(msg);
                 }
                 catch (Exception ex)
                 {
                     var errmsg = $"API import failed with error \"{ex.Message}\"";
-                    Program.Logger.LogError(errmsg);
+                    _logger.LogError(errmsg);
 
                     if (callBackUrl != string.Empty)
-                        await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
+                        await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
                 }
                 finally
                 {
-                    Program.ImportRunning = false;
+                    AppContext.ImportRunning = false;
                 }
             }
             else
             {
                 var errmsg = $"No account found for \"{accountFilename}\". Check log at startup to see account loading errors";
-                Program.Logger.LogError(errmsg);
+                _logger.LogError(errmsg);
                 if (callBackUrl != string.Empty)
-                    await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
+                    await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
             }
         }
         else
         {
             var errmsg = "No account filename provided, api import failed";
-            Program.Logger.LogError(errmsg);
+            _logger.LogError(errmsg);
 
             if (callBackUrl != string.Empty)
-                await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
+                await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
         }
 
-        Program.ImportRunning = false;
+        AppContext.ImportRunning = false;
 
     }
 
@@ -105,7 +110,7 @@
         {
             try
             {
-                await client.GetAsync(url, token).ConfigureAwait(false);
+                await client.GetAsync(url, token);
                 retry = false;
             }
             catch
@@ -124,7 +129,7 @@
         {
             try
             {
-                await client.PostAsync(url, new StringContent(message), token).ConfigureAwait(false);
+                await client.PostAsync(url, new StringContent(message), token);
                 retry = false;
             }
             catch

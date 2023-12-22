@@ -1,22 +1,21 @@
 ﻿@page "/import-server"
+@using System.Diagnostics
+@using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Services.MessageImportService
+
+@inject MessageImportService MessageImportService;
+@inject ILoggerFactory LoggerFactory;
+@inject ApplicationContext AppContext;
+
 
 <PageTitle>Import mail from online account</PageTitle>
-
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using MailKit;
-@using MailKit.Search;
-@using MailKit.Security;
-@using MailKit.Net.Imap;
-@using MimeKit;
-@using System.Diagnostics;
 
 <h1>Import from mailserver</h1>
 
 <p>
     Select account:
-    <select @bind="selectedAccountFilename">
-        @foreach (var acc in Program.Config.Accounts)
+    <select @bind="_selectedAccountFilename">
+        @foreach (var acc in AppContext.Accounts)
         {
             <option value="@acc.AccountFilename">@acc.AccountDisplayName</option>
         }
@@ -24,98 +23,104 @@
 </p>
 
 <p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@Program.ImportRunning">Import from selected account</button>
+    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@AppContext.ImportRunning">Import from selected account</button>
     <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
 </p>
 
-<p role="status">@Program.ImportProgress.InfoMessage</p>
+<p role="status">@AppContext.ImportProgress?.InfoMessage</p>
 <table class="table-responsive">
     <tr>
         <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.CurrentFolder</td>
     </tr>
     <tr>
         <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ParsedMessageCount</td>
     </tr>
     <tr>
         <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ImportedMessageCount</td>
     </tr>
     <tr>
         <td>Messages deleted on server</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.RemoteMessagesDeletedCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.RemoteMessagesDeletedCount</td>
     </tr>
     <tr>
         <td>Messages deleted locally</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.LocalMessagesDeletedCount</td>
+        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.LocalMessagesDeletedCount</td>
     </tr>
 </table>
 
-@if (Program.ImportRunning)
+@if (AppContext.ImportRunning)
 {
-    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
+    <ImportDialog Progress="@AppContext.ImportProgress" OnCancel="@Cancel" />
 }
 
 
 @code {
-    private string selectedAccountFilename = Program.Config.Accounts.FirstOrDefault()?.AccountFilename;
-    private CancellationTokenSource ctSource;
+    private string? _selectedAccountFilename;
+    private CancellationTokenSource? _ctSource;
 
-    private void Cancel() => ctSource?.Cancel();
+    protected override void OnInitialized()
+    {
+        _selectedAccountFilename = AppContext.Accounts.FirstOrDefault()?.AccountFilename;
+        base.OnInitialized();
+    }
+
+    private void Cancel() => _ctSource?.Cancel();
 
     private async Task ImportFromAccount()
     {
-        if (Program.ImportRunning)
+        if (AppContext.ImportRunning)
             return;
-        Program.ImportProgress = new();
-        ctSource = new CancellationTokenSource();
-        Program.ImportProgress.Ct = ctSource.Token;
-        Program.ImportRunning = true;
+        AppContext.ImportProgress = new(LoggerFactory);
+        _ctSource = new CancellationTokenSource();
+        AppContext.ImportProgress.Ct = _ctSource.Token;
+        AppContext.ImportRunning = true;
 
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+        await InvokeAsync(StateHasChanged);
 
         var watch = new Stopwatch();
         string fmt = @"hh\:mm\:ss";
 
         try
         {
-            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
-            if (selectedAccountFilename == null)
+            AppContext.ImportProgress.InfoMessage = "Import starting, please wait...";
+            if (_selectedAccountFilename == null)
                 throw new ArgumentException("No valid account selected.");
 
             watch.Start();
-            var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
+            var mailTask = MessageImportService.ImportFromServer(_selectedAccountFilename, AppContext.ImportProgress);
 
             while (!mailTask.IsCompleted)
             {
-                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
-                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+                AppContext.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
+                await InvokeAsync(StateHasChanged);
                 Thread.Sleep(1000);
             }
-            await mailTask.ConfigureAwait(false);
-            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
+            await mailTask;
+            AppContext.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
         }
         catch (OperationCanceledException)
         {
-            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
+            AppContext.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
         }
         catch (InvalidDataException)
         {
-            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
+            AppContext.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
         }
         catch (ArgumentException ex)
         {
-            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
+            AppContext.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
         }
         catch (Exception ex)
         {
-            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
+            AppContext.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
         }
         finally
         {
-            Program.ImportRunning = false;
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
+            AppContext.ImportRunning = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 }

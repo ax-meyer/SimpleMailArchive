@@ -1,20 +1,18 @@
 ﻿@page "/"
 @page "/browse"
+@using Microsoft.EntityFrameworkCore
+@using SimpleMailArchiver.Data
+@using System.Globalization
 
 <PageTitle>Mail Archive</PageTitle>
-
-@using SimpleMailArchiver.Data
-@using Microsoft.EntityFrameworkCore;
-@using System.Text.Json;
-
-@implements IAsyncDisposable
+@inject IDbContextFactory<ArchiveContext> DbContextFactory;
 
 <h1>Mail Archive</h1>
 
 <p>
     Folder:
-    <select @bind="selectedFolder">
-        @foreach (var folder in filterFolders)
+    <select @bind="SelectedFolder">
+        @foreach (var folder in _filterFolders)
         {
             <option value="@folder">@folder</option>
         }
@@ -23,10 +21,10 @@
 
 <p>
     Search:
-    <input @bind="filterString" placeholder="Type to search..." />
+    <input @bind="FilterString" placeholder="Type to search..." />
 </p>
 
-<p>Number of messages: @numMessages</p>
+<p>Number of messages: @_numMessages</p>
 
 
 <table class="table">
@@ -34,7 +32,7 @@
         <tr>
             @foreach (TableHeader header in Enum.GetValues(typeof(TableHeader)))
             {
-                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => sortTable(header))">
+                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => SortTable(header))">
                     @if (header == TableHeader.Attachments)
                     {
                         <p class="in-table">&#x1F4CE</p>
@@ -48,9 +46,9 @@
         </tr>
     </thead>
     <tbody>
-        <Virtualize @ref="virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
+        <Virtualize @ref="_virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
             <ItemContent>
-                <MailTableEntry Message="@message" @onclick="() => DisplayMessage(message)" />
+                <MailTableEntry Message="@message" @Onclick="() => DisplayMessage(message)" />
             </ItemContent>
             <Placeholder><p>Loading Message...</p></Placeholder>
         </Virtualize>
@@ -58,110 +56,105 @@
 </table>
 
 
-@if (showMessage)
+@if (_showMessage)
 {
-    <DisplayMail Message="@selectedMessage" OnClose="@DisplayMailClosing" />
+    <DisplayMail Message="@_selectedMessage" OnClose="@DisplayMailClosing" />
 }
 
 @code {
-    private int numMessages = 0;
-    private ICollection<MailMessage> messages { get; set; }
-    private bool showMessage = false;
-    private TableHeader headerToSortBy = TableHeader.Date;
-    private List<string> filterFolders = new() { "All" };
+    private int _numMessages;
+    private ICollection<MailMessage>? Messages { get; set; }
+    private bool _showMessage;
+    private TableHeader _headerToSortBy = TableHeader.Date;
+    private List<string> _filterFolders = new() { "All" };
     private string _selectedFolder = "All";
-    private bool sortAscending = false;
+    private bool _sortAscending;
     private string _filterString = "";
 
 
 #nullable enable
-    private MailMessage? selectedMessage;
-    private event EventHandler? searchEvent;
-    private Virtualize<MailMessage>? virtualizeComponent;
+    private MailMessage? _selectedMessage;
+    private event EventHandler? SearchEvent;
+    private Virtualize<MailMessage>? _virtualizeComponent;
 #nullable disable
 
-    private string selectedFolder
+    private string SelectedFolder
     {
         get => _selectedFolder;
         set
         {
             _selectedFolder = value;
-            searchEvent?.Invoke(null, EventArgs.Empty);
+            SearchEvent?.Invoke(null, EventArgs.Empty);
         }
     }
 
-    private string filterString
+    private string FilterString
     {
         get => _filterString;
         set
         {
             _filterString = value;
-            searchEvent?.Invoke(null, EventArgs.Empty);
+            SearchEvent?.Invoke(null, EventArgs.Empty);
         }
     }
 
-    private ArchiveContext context;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync().ConfigureAwait(false);
+        await base.OnInitializedAsync();
 
-        context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
-        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync().ConfigureAwait(false));
-        searchEvent += async (sender, e) => await MessageUpdate().ConfigureAwait(false);
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        _filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
+        SearchEvent += async (sender, e) => await MessageUpdate();
     }
 
-    private async Task sortTable(TableHeader header)
+    private async Task SortTable(TableHeader header)
     {
-        if (headerToSortBy == header)
-            sortAscending = !sortAscending;
+        if (_headerToSortBy == header)
+            _sortAscending = !_sortAscending;
         else
-            headerToSortBy = header;
-        await MessageUpdate().ConfigureAwait(false);
+            _headerToSortBy = header;
+        await MessageUpdate();
     }
 
     private async Task MessageUpdate()
     {
-        if (virtualizeComponent != null)
-            await virtualizeComponent.RefreshDataAsync().ConfigureAwait(false);
+        if (_virtualizeComponent != null)
+            await _virtualizeComponent.RefreshDataAsync();
         StateHasChanged();
     }
 
     private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
     {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
         var msgs = context.MailMessages.AsQueryable();
-        if (selectedFolder != "All")
-            msgs = msgs.Where(m => m.Folder == selectedFolder);
-        if (filterString.Trim() != string.Empty)
+        if (SelectedFolder != "All")
+            msgs = msgs.Where(m => m.Folder == SelectedFolder);
+        if (FilterString.Trim() != string.Empty)
             msgs = msgs.Where(m =>
-            m.Subject.Contains(filterString) ||
-            m.Sender.Contains(filterString) ||
-            m.Recipient.Contains(filterString) ||
-            m.CC_recipient.Contains(filterString) ||
-            m.BCC_recipient.Contains(filterString) ||
-            m.Date.ToString().Contains(filterString) ||
-            m.Attachments.Contains(filterString) ||
-            m.Folder.Contains(filterString) ||
-            m.TextBody.Contains(filterString));
+            m.Subject.Contains(FilterString) ||
+            m.Sender.Contains(FilterString) ||
+            m.Recipient.Contains(FilterString) ||
+            m.CcRecipient.Contains(FilterString) ||
+            m.BccRecipient.Contains(FilterString) ||
+            m.Date.ToString(CultureInfo.InvariantCulture).Contains(FilterString) ||
+            m.Attachments.Contains(FilterString) ||
+            m.Folder.Contains(FilterString) ||
+            m.TextBody.Contains(FilterString));
 
-        numMessages = await msgs.CountAsync().ConfigureAwait(false);
+        _numMessages = await msgs.CountAsync();
         StateHasChanged();
-        var ms = msgs.OrderBy(headerToSortBy.ToString(), sortAscending).Skip(request.StartIndex).Take(request.Count);
-        return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
+        var ms = msgs.OrderBy(_headerToSortBy.ToString(), _sortAscending).Skip(request.StartIndex).Take(request.Count).ToArray();
+        return new ItemsProviderResult<MailMessage>(ms, _numMessages);
     }
 
     private void DisplayMessage(MailMessage message)
     {
         if (message == null) throw new ArgumentNullException(nameof(message));
-        selectedMessage = message;
-        showMessage = true;
+        _selectedMessage = message;
+        _showMessage = true;
     }
 
-    private void DisplayMailClosing() => showMessage = false;
+    private void DisplayMailClosing() => _showMessage = false;
 
-    public async ValueTask DisposeAsync()
-    {
-        if (context is not null)
-            await context.DisposeAsync().ConfigureAwait(false);
-    }
 }
