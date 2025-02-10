@@ -56,7 +56,7 @@
             return;
 
         _ctSource = new CancellationTokenSource();
-        AppContext.ImportProgress = new(LoggerFactory)
+        AppContext.ImportProgress = new ImportProgress(LoggerFactory)
         {
             Ct = _ctSource.Token
         };
@@ -73,7 +73,7 @@
         await InvokeAsync(StateHasChanged);
 
         var watch = new Stopwatch();
-        string fmt = @"hh\:mm\:ss";
+        var fmt = @"hh\:mm\:ss";
 
         try
         {

@@ -7,7 +7,7 @@ public partial class MessageImportService
 {
     public async Task ImportFromFolder(string[] emlPaths, string importFolderRoot, ImportProgress progress)
 	{
-        _appContext.ImportRunning = true;
+        appContext.ImportRunning = true;
         _logger.LogInformation("Start import from folder");
 
 
@@ -16,7 +16,7 @@ public partial class MessageImportService
         {
             await Parallel.ForEachAsync(emlPaths, progress.Ct, async (file, innerToken) =>
             {
-                await using var context = await _dbContextFactory.CreateDbContextAsync(innerToken);
+                await using var context = await dbContextFactory.CreateDbContextAsync(innerToken);
 
                 innerToken.ThrowIfCancellationRequested();
 
@@ -24,7 +24,7 @@ public partial class MessageImportService
                 progress.CurrentFolder = Path.GetDirectoryName(basepathUri.MakeRelativeUri(new Uri(file)).OriginalString)!;
 
                 using var msg = await MimeMessage.LoadAsync(file, innerToken);
-                bool saved = await _messageHelperService.SaveMessage(msg, progress.CurrentFolder, innerToken);
+                var saved = await messageHelperService.SaveMessage(msg, progress.CurrentFolder, innerToken);
                 progress.ParsedMessageCount++;
 
                 if (saved)
@@ -34,7 +34,7 @@ public partial class MessageImportService
         finally
         {
             //await context.SaveChangesAsync(progress.Ct);
-            _appContext.ImportRunning = false;
+            appContext.ImportRunning = false;
             _logger.LogInformation("Finished import from folder");
         }
     }

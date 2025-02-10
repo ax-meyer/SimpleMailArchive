@@ -4,17 +4,11 @@ using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Pages
 {
-    public class FileDownloadsModel : PageModel
+    public class FileDownloadsModel(FileDownloadHelperContext helperContext) : PageModel
     {
-        private readonly FileDownloadHelperContext _helperContext;
-        
-        public FileDownloadsModel(FileDownloadHelperContext helperContext)
-        {
-            _helperContext = helperContext;
-        }
         public Task<IActionResult> OnGet()
         {
-            return Task.FromResult<IActionResult>(File(_helperContext.FileContent, "application/force-download", _helperContext.FileName));
+            return Task.FromResult<IActionResult>(File(helperContext.FileContent, "application/force-download", helperContext.FileName));
         }
     }
 }

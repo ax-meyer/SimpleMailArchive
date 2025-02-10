@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using MimeKit;
+using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Data;
 
@@ -39,7 +40,7 @@ public class MailMessage : IEquatable<MailMessage>
 
         if (obj is MailMessage other)
         {
-            bool equal = true;
+            var equal = true;
             foreach (var prop in GetType().GetProperties())
             {
                 switch (prop.Name)
@@ -48,9 +49,9 @@ public class MailMessage : IEquatable<MailMessage>
                         continue;
                     case nameof(Date):
                     {
-                        DateTime first = Date;
-                        DateTime second = other.Date;
-                        string fmt = "dd.MM.yyyy-HH:mm:ss";
+                        var first = Date;
+                        var second = other.Date;
+                        var fmt = "dd.MM.yyyy-HH:mm:ss";
                         equal = first.ToString(fmt) == second.ToString(fmt);
                         break;
                     }
@@ -87,7 +88,7 @@ public static class MailParser
         if (mimeMessage == null) throw new ArgumentNullException(nameof(mimeMessage));
 
         // generate list of attachment filenames
-        List<string> attachmentNames = new();
+        List<string> attachmentNames = [];
         attachmentNames.AddRange(mimeMessage.Attachments.Select(attachment =>
             attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
 

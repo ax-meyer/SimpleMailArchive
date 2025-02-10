@@ -1,13 +1,8 @@
 ﻿namespace SimpleMailArchiver.Data;
 
-public class ImportProgress
+public class ImportProgress(ILoggerFactory loggerFactory)
 {
-    private readonly ILogger<ImportProgress> _logger;
-
-    public ImportProgress(ILoggerFactory loggerFactory)
-    {
-        _logger = loggerFactory.CreateLogger<ImportProgress>();
-    }
+    private readonly ILogger<ImportProgress> _logger = loggerFactory.CreateLogger<ImportProgress>();
 
     private string? _currentFolder;
 

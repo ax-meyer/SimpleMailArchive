@@ -20,7 +20,7 @@ public class ApplicationContext
     [MemberNotNull(nameof(Accounts))]
     private void LoadAccounts()
     {
-        Accounts = new List<Account>();
+        Accounts = [];
 
         var files = Directory.GetFiles(PathConfig.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
         Accounts.Capacity = files.Length;

@@ -32,7 +32,7 @@ public class Startup
             Directory.CreateDirectory(_appContext.PathConfig.DbPath);
 
         // Database
-        string connectionString = $"DataSource={_appContext.PathConfig.DbPath}/archive.db";
+        var connectionString = $"DataSource={_appContext.PathConfig.DbPath}/archive.db";
         services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
 
         // Logging

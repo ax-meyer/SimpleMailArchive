@@ -13,17 +13,17 @@ public partial class MessageImportService
     public async Task ImportFromServer(string accountFilename, ImportProgress progress)
     {
         _logger.LogInformation("Starting import from server on {AccountFilename}", accountFilename);
-        _appContext.ImportRunning = true;
+        appContext.ImportRunning = true;
 
-        var account = _appContext.Accounts.First(item => item.AccountFilename == accountFilename);
+        var account = appContext.Accounts.First(item => item.AccountFilename == accountFilename);
 
         using var client = new ImapClient();
         await client
-            .ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct)
+                .ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct)
             ;
         await client.AuthenticateAsync(account.Username, account.Password, progress.Ct);
 
-        await using var context = await _dbContextFactory.CreateDbContextAsync(progress.Ct);
+        await using var context = await dbContextFactory.CreateDbContextAsync(progress.Ct);
 
         var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct)
             ;
@@ -35,7 +35,7 @@ public partial class MessageImportService
                 if (folderOptions is { Exclude: true })
                     continue;
 
-                string archiveFolder = "";
+                var archiveFolder = "";
                 if (account.BasePathInArchive != null && account.BasePathInArchive.Trim().TrimEnd('/') != string.Empty)
                     archiveFolder = account.BasePathInArchive.TrimEnd('/') + "/";
 
@@ -51,12 +51,13 @@ public partial class MessageImportService
                 var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct);
                 var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct);
                 var messageSummaries = await folder
-                    .FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct)
+                        .FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers,
+                            progress.Ct)
                     ;
                 var messageToDeleteIds = new List<UniqueId>();
                 var messagesOnServer = new List<string>();
 
-                int deleteAfterDays = account.DeleteAfterDays;
+                var deleteAfterDays = account.DeleteAfterDays;
                 if (folderOptions is { DeleteAfterDays: not null })
                     deleteAfterDays = (int)folderOptions.DeleteAfterDays;
 
@@ -87,9 +88,9 @@ public partial class MessageImportService
                         // if yes, move in archive
                         if (existingMsg.Folder != archiveFolder)
                         {
-                            var oldEmlPath = _messageHelperService.GetEmlPath(existingMsg);
+                            var oldEmlPath = messageHelperService.GetEmlPath(existingMsg);
                             existingMsg.Folder = archiveFolder;
-                            var newEmlPath = _messageHelperService.GetEmlPath(existingMsg);
+                            var newEmlPath = messageHelperService.GetEmlPath(existingMsg);
                             var dirName = Path.GetDirectoryName(newEmlPath);
                             Directory.CreateDirectory(dirName!);
                             File.Move(oldEmlPath, newEmlPath);
@@ -99,12 +100,10 @@ public partial class MessageImportService
                         continue;
                     }
 
-                    using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct)
-                        ;
+                    using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, progress.Ct);
                     msg.Date = (DateTimeOffset)messageSummary.InternalDate;
 
-                    bool saved = await _messageHelperService.SaveMessage(msg, progress.CurrentFolder, progress.Ct)
-                        ;
+                    var saved = await messageHelperService.SaveMessage(msg, progress.CurrentFolder, progress.Ct);
                     progress.ParsedMessageCount++;
 
                     if (saved)
@@ -125,7 +124,8 @@ public partial class MessageImportService
 
                 if (folderOptions is { SyncServerFolder: true })
                 {
-                    var msgsToDelete = context.MailMessages.Where(msg => messagesOnServer.All(onServer => msg.Hash != onServer) && msg.Folder == folder.FullName)
+                    var msgsToDelete = context.MailMessages.Where(msg =>
+                            messagesOnServer.All(onServer => msg.Hash != onServer) && msg.Folder == folder.FullName)
                         .ToArray();
                     if (msgsToDelete is { Length: > 0 })
                     {
@@ -134,15 +134,16 @@ public partial class MessageImportService
                         {
                             try
                             {
-                                var emlPath = _messageHelperService.GetEmlPath(msg);
+                                var emlPath = messageHelperService.GetEmlPath(msg);
                                 File.Delete(emlPath);
                                 deletedMessages.Add(msg);
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError("Failed to delete message {MsgId}", msg.Id);
+                                _logger.LogError(ex, "Failed to delete message {MsgId}", msg.Id);
                             }
                         }
+
                         context.MailMessages.RemoveRange(deletedMessages);
                         await context.SaveChangesAsync();
                         progress.LocalMessagesDeletedCount += deletedMessages.Count;
@@ -155,7 +156,7 @@ public partial class MessageImportService
         finally
         {
             await context.SaveChangesAsync(progress.Ct);
-            _appContext.ImportRunning = false;
+            appContext.ImportRunning = false;
         }
     }
 }

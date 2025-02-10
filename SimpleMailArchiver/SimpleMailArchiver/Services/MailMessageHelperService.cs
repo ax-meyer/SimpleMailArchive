@@ -2,23 +2,15 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
+using SimpleMailArchiver.Data;
 
-namespace SimpleMailArchiver.Data;
+namespace SimpleMailArchiver.Services;
 
-public class MailMessageHelperService
+public class MailMessageHelperService(ApplicationContext appContext, IDbContextFactory<ArchiveContext> dbContextFactory)
 {
-    private readonly ApplicationContext _appContext;
-    private readonly IDbContextFactory<ArchiveContext> _dbContextFactory;
-
-    public MailMessageHelperService(ApplicationContext appContext, IDbContextFactory<ArchiveContext> dbContextFactory)
-    {
-        _appContext = appContext;
-        _dbContextFactory = dbContextFactory;
-    }
-
     public string GetEmlPath(MailMessage message)
     {
-        return (_appContext.PathConfig.ArchiveBasePath + "/" + message.Folder + "/message-" + message.Id + ".eml")
+        return (appContext.PathConfig.ArchiveBasePath + "/" + message.Folder + "/message-" + message.Id + ".eml")
             .Replace("//", "/");
     }
 
@@ -37,12 +29,12 @@ public class MailMessageHelperService
         strData += ccRecipient;
         strData += bccRecipient;
 
-        byte[] encodedMessage = Encoding.UTF8.GetBytes(strData);
+        var encodedMessage = Encoding.UTF8.GetBytes(strData);
         using var alg = SHA256.Create();
-        string hex = "";
+        var hex = "";
 
         var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token);
-        foreach (byte x in hashValue)
+        foreach (var x in hashValue)
         {
             hex += $"{x:x2}";
         }
@@ -54,9 +46,8 @@ public class MailMessageHelperService
     {
         var mailMessage = await MailParser.Construct(mimeMessage, folder, token);
 
-        await using var context = await _dbContextFactory.CreateDbContextAsync(token);
-        if (await context.MailMessages.AnyAsync(o => o.Hash == mailMessage.Hash, token))
-            return false;
+        await using var context = await dbContextFactory.CreateDbContextAsync(token);
+        if (await context.MailMessages.AnyAsync(o => o.Hash == mailMessage.Hash, token)) return false;
 
         token.ThrowIfCancellationRequested();
 
@@ -64,8 +55,7 @@ public class MailMessageHelperService
 
         var emlPath = GetEmlPath(mailMessage);
         var parentFolder = Path.GetDirectoryName(emlPath);
-        if (parentFolder is null)
-            throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
+        if (parentFolder is null) throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
 
         Directory.CreateDirectory(parentFolder);
         await mimeMessage.WriteToAsync(emlPath, token);

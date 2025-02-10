@@ -66,7 +66,7 @@
     private ICollection<MailMessage>? Messages { get; set; }
     private bool _showMessage;
     private TableHeader _headerToSortBy = TableHeader.Date;
-    private List<string> _filterFolders = new() { "All" };
+    private List<string> _filterFolders = ["All"];
     private string _selectedFolder = "All";
     private bool _sortAscending;
     private string _filterString = "";
@@ -104,7 +104,7 @@
         await base.OnInitializedAsync();
 
         await using var context = await DbContextFactory.CreateDbContextAsync();
-        _filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
+        _filterFolders.AddRange(await context.MailMessages.AsNoTracking().Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
         SearchEvent += async (sender, e) => await MessageUpdate();
     }
 
@@ -127,7 +127,7 @@
     private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
     {
         await using var context = await DbContextFactory.CreateDbContextAsync();
-        var msgs = context.MailMessages.AsQueryable();
+        var msgs = context.MailMessages.AsNoTracking().AsQueryable();
         if (SelectedFolder != "All")
             msgs = msgs.Where(m => m.Folder == SelectedFolder);
         if (FilterString.Trim() != string.Empty)
@@ -144,17 +144,15 @@
 
         _numMessages = await msgs.CountAsync();
         StateHasChanged();
-        var ms = msgs.OrderBy(_headerToSortBy.ToString(), _sortAscending).Skip(request.StartIndex).Take(request.Count).ToArray();
+        var ms = await msgs.OrderBy(_headerToSortBy.ToString(), _sortAscending).Skip(request.StartIndex).Take(request.Count).ToArrayAsync();
         return new ItemsProviderResult<MailMessage>(ms, _numMessages);
     }
 
     private void DisplayMessage(MailMessage message)
     {
-        if (message == null) throw new ArgumentNullException(nameof(message));
-        _selectedMessage = message;
+        _selectedMessage = message ?? throw new ArgumentNullException(nameof(message));
         _showMessage = true;
     }
 
     private void DisplayMailClosing() => _showMessage = false;
-
 }

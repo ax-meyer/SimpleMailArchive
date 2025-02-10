@@ -20,16 +20,16 @@
         _logger.LogInformation("Starting api import");
 
         var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
-        _logger.LogInformation("called URI \\\"{Uri}\\\"", uri);
+        _logger.LogInformation("called URI {Uri}", uri);
 
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(10);
-        string callBackUrl = "";
+        var callBackUrl = "";
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("callBackUrl", out var callback))
         {
             callBackUrl = callback.ToString().Trim().TrimEnd('/');
 
-            _logger.LogInformation("callback url: \\\"{CallBackUrl}\\\"", callBackUrl);
+            _logger.LogInformation("callback url: {CallBackUrl}", callBackUrl);
 
             try
             {
@@ -37,19 +37,21 @@
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Calling {callBackUrl} failed with error {ex.Message}");
+                _logger.LogError("Calling {CallBackUrl} failed with error {ExMessage}", callBackUrl, ex.Message);
                 AppContext.ImportRunning = false;
                 return;
             }
         }
         else
+        {
             _logger.LogInformation("No callback url found");
+        }
 
 
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accountFilename", out var filename))
         {
-            string accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
-            _logger.LogInformation($"API import for account file: \"{accountFilename}\"");
+            var accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
+            _logger.LogInformation("API import for account file: {AccountFilename}", accountFilename);
 
             if (AppContext.Accounts.Any(acc => acc.AccountFilename == accountFilename))
             {
@@ -91,7 +93,7 @@
         }
         else
         {
-            var errmsg = "No account filename provided, api import failed";
+            const string errmsg = "No account filename provided, api import failed";
             _logger.LogError(errmsg);
 
             if (callBackUrl != string.Empty)
@@ -99,13 +101,12 @@
         }
 
         AppContext.ImportRunning = false;
-
     }
 
     private async Task HttpGetRetry(HttpClient client, string url, int retries, CancellationToken token = default)
     {
-        int counter = 0;
-        bool retry = true;
+        var counter = 0;
+        var retry = true;
         while(retry)
         {
             try
@@ -123,8 +124,8 @@
 
     private async Task HttpPostRetry(HttpClient client, string url, string message, int retries, CancellationToken token = default)
     {
-        int counter = 0;
-        bool retry = true;
+        var counter = 0;
+        var retry = true;
         while (retry)
         {
             try
