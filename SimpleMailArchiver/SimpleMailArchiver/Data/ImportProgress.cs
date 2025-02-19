@@ -4,8 +4,6 @@ public class ImportProgress(ILoggerFactory loggerFactory)
 {
     private readonly ILogger<ImportProgress> _logger = loggerFactory.CreateLogger<ImportProgress>();
 
-    private string? _currentFolder;
-
     public int TotalMessageCount { get; set; }
     public int ParsedMessageCount { get; set; }
     public int ImportedMessageCount { get; set; }
@@ -14,11 +12,11 @@ public class ImportProgress(ILoggerFactory loggerFactory)
 
     public string? CurrentFolder
     {
-        get => _currentFolder;
+        get;
         set
         {
-            _currentFolder = value;
-            _logger.LogInformation("Processing folder {CurrentFolder}", _currentFolder);
+            field = value;
+            _logger.LogInformation("Processing folder {CurrentFolder}", field);
         }
     }
 

@@ -4,10 +4,10 @@ namespace SimpleMailArchiver.Services;
 
 public class FileDownloadHelperContext(MailMessageHelperService messageHelperService)
 {
-    public byte[] FileContent { get; set; } = [0];
-    public string FileName { get; set; } = "empty";
+    public byte[] FileContent { get; private set; } = [0];
+    public string FileName { get; private set; } = "empty";
     
-    public async Task PrepareMessageForDownload(MailMessage message, CancellationToken token = default)
+    public async Task PrepareMessageForDownload(MailMessage message, CancellationToken token)
     {
         FileContent = await File.ReadAllBytesAsync(messageHelperService.GetEmlPath(message), token);
         FileName = "mail.eml";

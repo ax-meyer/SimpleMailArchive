@@ -1,6 +1,5 @@
 ﻿using SimpleMailArchiver;
 
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "SMA_");
 var startup = new Startup(builder.Configuration);

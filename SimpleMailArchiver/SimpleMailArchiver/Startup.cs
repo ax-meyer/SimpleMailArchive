@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Radzen;
 using SimpleMailArchiver.Data;
 using SimpleMailArchiver.Services;
 
@@ -20,9 +20,11 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
+        
+        services.AddRazorComponents().AddInteractiveServerComponents();
         // AppConfig
         services.AddSingleton(_appContext);
-        services.AddSingleton<FileDownloadHelperContext>();
+        services.AddScoped<FileDownloadHelperContext>();
         services.AddScoped<MailMessageHelperService>();
 
         // Set up directories
@@ -37,12 +39,14 @@ public class Startup
 
         // Logging
         services.AddLogging();
-
-
+        
         // Other
         services.AddRazorPages();
         services.AddServerSideBlazor();
         services.AddLocalization();
+        
+        services.AddRadzenComponents();
+        services.AddRadzenQueryStringThemeService();
     }
 
     public void ConfigureLogging(ILoggingBuilder loggingBuilder)
@@ -69,7 +73,9 @@ public class Startup
         app.UseRouting();
         app.UseAuthorization();
         app.MapRazorPages();
-        
+        app.UseAntiforgery();
+        app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
         app.Logger.LogInformation(
             "Using conifg:\n\t" +
             $"Account configs path: {_appContext.PathConfig.AccountConfigsPath}\n\t" +

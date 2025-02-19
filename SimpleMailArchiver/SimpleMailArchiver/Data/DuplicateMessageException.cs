@@ -1,14 +1,12 @@
-﻿namespace SimpleMailArchiver.Data
-{
-	public class DuplicateMessageException : Exception
-	{
-		public DuplicateMessageException()
-		{
-		}
+﻿namespace SimpleMailArchiver.Data;
 
-		public DuplicateMessageException(string message) : base(message)
-		{ 
-        }
+public class DuplicateMessageException : Exception
+{
+	public DuplicateMessageException()
+	{
+	}
+
+	public DuplicateMessageException(string message) : base(message)
+	{ 
 	}
 }
-

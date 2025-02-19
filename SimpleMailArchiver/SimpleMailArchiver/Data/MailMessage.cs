@@ -35,36 +35,38 @@ public class MailMessage : IEquatable<MailMessage>
 
     public override bool Equals(object? obj)
     {
-        if (obj is null)
-            return false;
-
-        if (obj is MailMessage other)
+        switch (obj)
         {
-            var equal = true;
-            foreach (var prop in GetType().GetProperties())
+            case null:
+                return false;
+            case MailMessage other:
             {
-                switch (prop.Name)
+                var equal = true;
+                foreach (var prop in GetType().GetProperties())
                 {
-                    case nameof(Id):
-                        continue;
-                    case nameof(Date):
+                    switch (prop.Name)
                     {
-                        var first = Date;
-                        var second = other.Date;
-                        var fmt = "dd.MM.yyyy-HH:mm:ss";
-                        equal = first.ToString(fmt) == second.ToString(fmt);
-                        break;
+                        case nameof(Id):
+                            continue;
+                        case nameof(Date):
+                        {
+                            var first = Date;
+                            var second = other.Date;
+                            const string fmt = "dd.MM.yyyy-HH:mm:ss";
+                            equal = first.ToString(fmt) == second.ToString(fmt);
+                            break;
+                        }
+                        default:
+                            equal = prop.GetValue(this) == prop.GetValue(other);
+                            break;
                     }
-                    default:
-                        equal = prop.GetValue(this) == prop.GetValue(other);
-                        break;
                 }
+
+                return equal;
             }
-
-            return equal;
+            default:
+                throw new InvalidDataException();
         }
-
-        throw new InvalidDataException();
     }
 
     public bool Equals(MailMessage? other)
@@ -76,7 +78,28 @@ public class MailMessage : IEquatable<MailMessage>
 
     public override int GetHashCode()
     {
-        throw new NotImplementedException();
+        unchecked // Use unchecked block to allow overflow without throwing exceptions
+        {
+            var hash = 17;
+
+            // Include required properties in hash calculation
+            hash = hash * 31 + Hash.GetHashCode();
+            hash = hash * 31 + Subject.GetHashCode();
+            hash = hash * 31 + Sender.GetHashCode();
+            hash = hash * 31 + Recipient.GetHashCode();
+            hash = hash * 31 + (CcRecipient?.GetHashCode() ?? 0);
+            hash = hash * 31 + (BccRecipient?.GetHashCode() ?? 0);
+
+            // Format Date to ensure consistent hash contributions
+            hash = hash * 31 + Date.ToString("dd.MM.yyyy-HH:mm:ss").GetHashCode();
+
+            hash = hash * 31 + (Attachments?.GetHashCode() ?? 0);
+            hash = hash * 31 + Folder.GetHashCode();
+            hash = hash * 31 + TextBody.GetHashCode();
+            hash = hash * 31 + HtmlBody.GetHashCode();
+
+            return hash; // Return the accumulated hash
+        }
     }
 }
 
@@ -85,7 +108,7 @@ public static class MailParser
     public static async Task<MailMessage> Construct(MimeMessage mimeMessage, string folder,
         CancellationToken token = default)
     {
-        if (mimeMessage == null) throw new ArgumentNullException(nameof(mimeMessage));
+        ArgumentNullException.ThrowIfNull(mimeMessage);
 
         // generate list of attachment filenames
         List<string> attachmentNames = [];
@@ -94,13 +117,13 @@ public static class MailParser
 
         foreach (var part in mimeMessage.BodyParts)
         {
-            if (part.ContentDisposition != null && part.ContentDisposition.FileName != null)
+            if (part.ContentDisposition is { FileName: not null })
             {
                 var name = part.ContentDisposition.FileName;
                 if (!attachmentNames.Contains(name))
                     attachmentNames.Add(name);
             }
-            else if (part.ContentType != null && part.ContentType.Name != null)
+            else if (part.ContentType is { Name: not null })
             {
                 var name = part.ContentType.Name;
                 if (!attachmentNames.Contains(name))
@@ -114,8 +137,15 @@ public static class MailParser
         var ccRecipient = mimeMessage.Cc.ToString();
         var bccRecipient = mimeMessage.Bcc.ToString();
         var date = mimeMessage.Date.DateTime;
-        var hash = await MailMessageHelperService
-            .CreateMailHash(date, subject, sender, recipient, ccRecipient, bccRecipient, token);
+        var hash = await MailMessageHelperService.CreateMailHash(
+            date, 
+            subject,
+            sender,
+            recipient,
+            ccRecipient,
+            bccRecipient,
+            token
+        );
 
         var msg = new MailMessage
         {

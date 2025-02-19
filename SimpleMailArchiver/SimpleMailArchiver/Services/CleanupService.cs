@@ -1,8 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using SimpleMailArchiver.Data;
 
 namespace SimpleMailArchiver.Services;
 
+[PublicAPI]
 public class CleanupService(
     IDbContextFactory<ArchiveContext> dbContextFactory,
     MailMessageHelperService messageHelperService,

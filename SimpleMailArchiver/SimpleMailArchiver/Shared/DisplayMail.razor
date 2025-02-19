@@ -1,6 +1,5 @@
-﻿@using SimpleMailArchiver.Data
-@using SimpleMailArchiver.Pages
-@using System.Text.Json
+﻿@using System.Text.Json
+@using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Services
 @inject FileDownloadHelperContext DownloadHelperContext;
 @inject IJSRuntime JsRuntime;
@@ -69,7 +68,7 @@
 
     private async Task Download()
     {
-        await DownloadHelperContext.PrepareMessageForDownload(Message);
+        await DownloadHelperContext.PrepareMessageForDownload(Message, CancellationToken.None);
         await JsRuntime.InvokeAsync<object>("open", "download", "_blank");
     }
 

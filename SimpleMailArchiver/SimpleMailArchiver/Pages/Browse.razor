@@ -1,60 +1,20 @@
 ﻿@page "/"
 @page "/browse"
-@using Microsoft.EntityFrameworkCore
 @using SimpleMailArchiver.Data
-@using System.Globalization
+@using Radzen.Blazor
 
 <PageTitle>Mail Archive</PageTitle>
-@inject IDbContextFactory<ArchiveContext> DbContextFactory;
+@inject ArchiveContext DbContext;
 
 <h1>Mail Archive</h1>
 
-<p>
-    Folder:
-    <select @bind="SelectedFolder">
-        @foreach (var folder in _filterFolders)
-        {
-            <option value="@folder">@folder</option>
-        }
-    </select>
-</p>
-
-<p>
-    Search:
-    <input @bind="FilterString" placeholder="Type to search..." />
-</p>
-
-<p>Number of messages: @_numMessages</p>
-
-
-<table class="table">
-    <thead>
-        <tr>
-            @foreach (TableHeader header in Enum.GetValues(typeof(TableHeader)))
-            {
-                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => SortTable(header))">
-                    @if (header == TableHeader.Attachments)
-                    {
-                        <p class="in-table">&#x1F4CE</p>
-                    }
-                    else
-                    {
-                        <p class="in-table">@header.ToString()</p>
-                    }
-                </th>
-            }
-        </tr>
-    </thead>
-    <tbody>
-        <Virtualize @ref="_virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
-            <ItemContent>
-                <MailTableEntry Message="@message" @Onclick="() => DisplayMessage(message)" />
-            </ItemContent>
-            <Placeholder><p>Loading Message...</p></Placeholder>
-        </Virtualize>
-    </tbody>
-</table>
-
+<RadzenDataGrid AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" Data="@Messages">
+    <Columns>
+        <RadzenDataGridColumn TItem="@MailMessage" Context="data" Property="@nameof(MailMessage.Sender)" Title="Sender" />
+        <RadzenDataGridColumn TItem="@MailMessage" Context="data" Property="@nameof(MailMessage.Recipient)" Title="Recipient" />
+            
+    </Columns>
+</RadzenDataGrid>
 
 @if (_showMessage)
 {
@@ -62,90 +22,17 @@
 }
 
 @code {
-    private int _numMessages;
-    private ICollection<MailMessage>? Messages { get; set; }
+    public IQueryable<MailMessage> Messages { get; set; } = null!;
     private bool _showMessage;
-    private TableHeader _headerToSortBy = TableHeader.Date;
-    private List<string> _filterFolders = ["All"];
-    private string _selectedFolder = "All";
-    private bool _sortAscending;
-    private string _filterString = "";
 
-
-#nullable enable
     private MailMessage? _selectedMessage;
-    private event EventHandler? SearchEvent;
-    private Virtualize<MailMessage>? _virtualizeComponent;
-#nullable disable
-
-    private string SelectedFolder
-    {
-        get => _selectedFolder;
-        set
-        {
-            _selectedFolder = value;
-            SearchEvent?.Invoke(null, EventArgs.Empty);
-        }
-    }
-
-    private string FilterString
-    {
-        get => _filterString;
-        set
-        {
-            _filterString = value;
-            SearchEvent?.Invoke(null, EventArgs.Empty);
-        }
-    }
-
-
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        _filterFolders.AddRange(await context.MailMessages.AsNoTracking().Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync());
-        SearchEvent += async (sender, e) => await MessageUpdate();
-    }
-
-    private async Task SortTable(TableHeader header)
-    {
-        if (_headerToSortBy == header)
-            _sortAscending = !_sortAscending;
-        else
-            _headerToSortBy = header;
-        await MessageUpdate();
-    }
-
-    private async Task MessageUpdate()
-    {
-        if (_virtualizeComponent != null)
-            await _virtualizeComponent.RefreshDataAsync();
-        StateHasChanged();
-    }
-
-    private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
-    {
-        await using var context = await DbContextFactory.CreateDbContextAsync();
-        var msgs = context.MailMessages.AsNoTracking().AsQueryable();
-        if (SelectedFolder != "All")
-            msgs = msgs.Where(m => m.Folder == SelectedFolder);
-        if (FilterString.Trim() != string.Empty)
-            msgs = msgs.Where(m =>
-            m.Subject.Contains(FilterString) ||
-            m.Sender.Contains(FilterString) ||
-            m.Recipient.Contains(FilterString) ||
-            m.CcRecipient.Contains(FilterString) ||
-            m.BccRecipient.Contains(FilterString) ||
-            m.Date.ToString(CultureInfo.InvariantCulture).Contains(FilterString) ||
-            m.Attachments.Contains(FilterString) ||
-            m.Folder.Contains(FilterString) ||
-            m.TextBody.Contains(FilterString));
-
-        _numMessages = await msgs.CountAsync();
-        StateHasChanged();
-        var ms = await msgs.OrderBy(_headerToSortBy.ToString(), _sortAscending).Skip(request.StartIndex).Take(request.Count).ToArrayAsync();
-        return new ItemsProviderResult<MailMessage>(ms, _numMessages);
+        
+        Messages = DbContext.MailMessages;
+        var tstMEsages = Messages.ToList();
     }
 
     private void DisplayMessage(MailMessage message)
