@@ -1,7 +1,16 @@
+using System.IO;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using SimpleMailArchiver.Components;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Radzen;
 using SimpleMailArchiver.Data;
 using SimpleMailArchiver.Services;
+using SimpleMailArchiver.Services.MessageImportService;
 
 namespace SimpleMailArchiver;
 
@@ -36,6 +45,8 @@ public class Startup
         // Database
         var connectionString = $"DataSource={_appContext.PathConfig.DbPath}/archive.db";
         services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
+
+        services.AddScoped<MessageImportService>();
 
         // Logging
         services.AddLogging();

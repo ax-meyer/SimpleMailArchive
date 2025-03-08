@@ -2,6 +2,9 @@
 @using System.Diagnostics
 @using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Services.MessageImportService
+@using Radzen.Blazor
+@using Microsoft.AspNetCore.Components.Web
+@using SimpleMailArchiver.Shared
 @inject ILoggerFactory LoggerFactory;
 @inject MessageImportService MessageImportService;
 @inject ApplicationContext AppContext;
@@ -13,7 +16,7 @@
 
 <p>This will import emails from a folder with .eml files mounted to the @AppContext.PathConfig.ImportBasePath in the docker container.</p>
 
-<p>Root folder name for the import in archive: <input id="rootImportPath" @bind-value="_rootImportPath"></p>
+<p>Root folder name for the import in archive: <RadzenTextBox Value="@_rootImportPath"/></p>
 <p>The path the root folder in the archive the import folder will be mapped to.</p>
 <p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
 

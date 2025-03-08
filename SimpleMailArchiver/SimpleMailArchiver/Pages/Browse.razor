@@ -1,19 +1,26 @@
 ﻿@page "/"
 @page "/browse"
-@using SimpleMailArchiver.Data
+@using Radzen
 @using Radzen.Blazor
+@using SimpleMailArchiver.Data
+@using Microsoft.AspNetCore.Components.Web
+@using SimpleMailArchiver.Shared
 
 <PageTitle>Mail Archive</PageTitle>
 @inject ArchiveContext DbContext;
 
 <h1>Mail Archive</h1>
 
-<RadzenDataGrid AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" Data="@Messages">
+@{
+    RadzenDataGrid<MailMessage> grid;
+}
+<RadzenDataGrid @ref="grid" AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" FilterMode="FilterMode.Simple" Data="@_messages">
     <Columns>
-        <RadzenDataGridColumn TItem="@MailMessage" Context="data" Property="@nameof(MailMessage.Sender)" Title="Sender" />
-        <RadzenDataGridColumn TItem="@MailMessage" Context="data" Property="@nameof(MailMessage.Recipient)" Title="Recipient" />
-            
-    </Columns>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Id)" Title="Id" />
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender" />
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient" />
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" />
+        </Columns>
 </RadzenDataGrid>
 
 @if (_showMessage)
@@ -22,7 +29,7 @@
 }
 
 @code {
-    public IQueryable<MailMessage> Messages { get; set; } = null!;
+    private IQueryable<MailMessage>? _messages;
     private bool _showMessage;
 
     private MailMessage? _selectedMessage;
@@ -31,8 +38,7 @@
     {
         await base.OnInitializedAsync();
         
-        Messages = DbContext.MailMessages;
-        var tstMEsages = Messages.ToList();
+        _messages = DbContext.MailMessages;
     }
 
     private void DisplayMessage(MailMessage message)

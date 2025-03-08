@@ -1,0 +1,18 @@
+﻿@inherits LayoutComponentBase
+
+<RadzenComponents @rendermode="InteractiveServer"/>
+<PageTitle>SimpleMailArchiver</PageTitle>
+<RadzenHeader>
+    <RadzenLabel Text="SimpleMailArchiver"/>
+</RadzenHeader>
+<RadzenSidebar>
+    <RadzenPanelMenu>
+        <RadzenPanelMenuItem Text="Browse Archive" Icon="list" Path="/"/>
+        <RadzenPanelMenuItem Text="Import from Account" Icon="add" Path="import-server"/>
+        <RadzenPanelMenuItem Text="Import from Folder" Icon="add" Path="import-folder"/>
+    </RadzenPanelMenu>
+</RadzenSidebar>
+
+<RadzenBody>
+    @Body
+</RadzenBody>

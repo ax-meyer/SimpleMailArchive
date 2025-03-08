@@ -18,7 +18,7 @@ public enum TableHeader
     Attachments
 }
 
-public class MailMessage : IEquatable<MailMessage>
+public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IComparable
 {
     public long Id { get; init; }
     [Required] public required string Hash { get; set; }
@@ -32,6 +32,13 @@ public class MailMessage : IEquatable<MailMessage>
     [Required] public required string Folder { get; set; }
     [Required] public required string TextBody { get; init; }
     [Required] public required string HtmlBody { get; init; }
+
+    public int CompareTo(MailMessage? other)
+    {
+        if (other is null)
+            return 1;
+        return Id < other.Id ? -1 : Id > other.Id ? 1 : 0;
+    }
 
     public override bool Equals(object? obj)
     {
@@ -100,6 +107,13 @@ public class MailMessage : IEquatable<MailMessage>
 
             return hash; // Return the accumulated hash
         }
+    }
+
+    public int CompareTo(object? obj)
+    {
+        if (obj is not MailMessage other)
+            throw new ArgumentException("Object is not of type MailMessage");
+        return CompareTo(other);
     }
 }
 
