@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using SimpleMailArchiver.Components;
@@ -23,6 +24,13 @@ public class Startup
     {
         var appConfig = new PathConfig();
         configuration.Bind("Paths", appConfig);
+        if (configuration["Paths"] is null)
+        {
+            var configFile = "config.json";
+            if (!File.Exists(configFile)) throw new Exception();
+            appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile));
+            if (appConfig is null) throw new Exception();
+        }
         ConfigRoot = configuration;
         _appContext = new ApplicationContext(appConfig);
     }

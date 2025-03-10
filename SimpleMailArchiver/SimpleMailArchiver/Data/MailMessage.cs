@@ -5,19 +5,6 @@ using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Data;
 
-/// <summary>
-/// Table headers to display a mail message.
-/// </summary>
-public enum TableHeader
-{
-    Date,
-    Subject,
-    Sender,
-    Recipient,
-    Folder,
-    Attachments
-}
-
 public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IComparable
 {
     public long Id { get; init; }
@@ -29,9 +16,17 @@ public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IC
     public string? BccRecipient { get; init; }
     [Required] public required DateTime Date { get; init; }
     public string? Attachments { get; init; }
-    [Required] public required string Folder { get; set; }
-    [Required] public required string TextBody { get; init; }
-    [Required] public required string HtmlBody { get; init; }
+    [Required] public required string Folder { get; set; } 
+    public string TextBody { get; init; } = string.Empty;
+    public string HtmlBody { get; init; } = string.Empty;
+
+    public bool HasAttachments =>
+        !string.IsNullOrEmpty(Attachments) && JsonSerializer.Deserialize<string[]>(Attachments)?.Length > 0;
+
+    public int? NumberOfAttachments => string.IsNullOrEmpty(Attachments)
+        ? null
+        : JsonSerializer.Deserialize<string[]>(Attachments)?.Length;
+
 
     public int CompareTo(MailMessage? other)
     {
@@ -102,8 +97,15 @@ public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IC
 
             hash = hash * 31 + (Attachments?.GetHashCode() ?? 0);
             hash = hash * 31 + Folder.GetHashCode();
-            hash = hash * 31 + TextBody.GetHashCode();
-            hash = hash * 31 + HtmlBody.GetHashCode();
+            if (TextBody is not null)
+            {
+                hash = hash * 31 + TextBody.GetHashCode();
+            }
+
+            if (HtmlBody is not null)
+            {
+                hash = hash * 31 + HtmlBody.GetHashCode();
+            }
 
             return hash; // Return the accumulated hash
         }
@@ -152,7 +154,7 @@ public static class MailParser
         var bccRecipient = mimeMessage.Bcc.ToString();
         var date = mimeMessage.Date.DateTime;
         var hash = await MailMessageHelperService.CreateMailHash(
-            date, 
+            date,
             subject,
             sender,
             recipient,
@@ -171,8 +173,8 @@ public static class MailParser
             Date = date,
             Attachments = JsonSerializer.Serialize(attachmentNames),
             Folder = folder,
-            TextBody = mimeMessage.TextBody,
-            HtmlBody = mimeMessage.HtmlBody,
+            TextBody = mimeMessage.TextBody ?? string.Empty,
+            HtmlBody = mimeMessage.HtmlBody ?? string.Empty,
             Hash = hash
         };
 

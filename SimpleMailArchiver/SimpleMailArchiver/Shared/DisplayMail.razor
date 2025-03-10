@@ -52,8 +52,15 @@
                     }
                 </table>
                 <br /><br />
-                @((MarkupString)Message.HtmlBody)
-                @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
+                @if (Message.HtmlBody is not null)
+                {
+                    @((MarkupString)Message.HtmlBody)
+                    
+                }
+                @if (Message.TextBody is not null)
+                {
+                    @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
+                }
             </div>
         </div>
     </div>

@@ -1,5 +1,6 @@
 ﻿@page "/"
 @page "/browse"
+@using System.Text.Json
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
@@ -11,21 +12,41 @@
 
 <h1>Mail Archive</h1>
 
-@{
-    RadzenDataGrid<MailMessage> grid;
-}
-<RadzenDataGrid @ref="grid" AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" FilterMode="FilterMode.Simple" Data="@_messages">
+<RadzenDataGrid AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" FilterMode="FilterMode.Simple"
+                Data="@_messages">
     <Columns>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Id)" Title="Id" />
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender" />
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient" />
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" />
-        </Columns>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder"
+                              FilterMode="FilterMode.CheckBoxList"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
+            <HeaderTemplate>
+                <RadzenIcon Icon="attach_file"/>
+            </HeaderTemplate>
+            <Template>
+                @{
+                    var numberOfAttachments = context.NumberOfAttachments;
+                    if (numberOfAttachments is null or 0)
+                    {
+                        <RadzenIcon Icon="close"/>
+                    }
+                    else
+                    {
+                        <RadzenIcon Icon="check"/>
+                        <p class="in-table">(@numberOfAttachments)</p>
+                    }
+                }
+            </Template>
+        </RadzenDataGridColumn>
+
+    </Columns>
 </RadzenDataGrid>
 
 @if (_showMessage)
 {
-    <DisplayMail Message="@_selectedMessage" OnClose="@DisplayMailClosing" />
+    <DisplayMail Message="@_selectedMessage" OnClose="@DisplayMailClosing"/>
 }
 
 @code {
@@ -33,11 +54,11 @@
     private bool _showMessage;
 
     private MailMessage? _selectedMessage;
-    
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        
+
         _messages = DbContext.MailMessages;
     }
 
