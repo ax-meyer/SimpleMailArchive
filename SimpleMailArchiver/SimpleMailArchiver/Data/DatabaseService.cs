@@ -1,56 +1,44 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace SimpleMailArchiver.Data;
-
-public class DatabaseService
+namespace SimpleMailArchiver.Data
 {
-    public static void Initialize(IServiceProvider serviceProvider)
+    public class DatabaseService
     {
-
-        using ArchiveContext context = new(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
-        context.Database.EnsureCreated();
-        
-        if (!context.MailMessages.Any())
+        public static void Initialize(IServiceProvider serviceProvider)
         {
-            context.MailMessages.AddRange(
-                new MailMessage
-                {
-                    Subject = "Test 1",
-                    Sender = "Person 1",
-                    Hash = "abc",
-                    Recipient = "abc",
-                    Date = DateTime.Now,
-                    Folder = "test",
-                    TextBody = "test",
-                    HtmlBody = "test"
-                },
-
-                new MailMessage
-                {
-                    Subject = "Test 2",
-                    Sender = "Person 2",
-                    Hash = "abc",
-                    Recipient = "abc",
-                    Date = DateTime.Now,
-                    Folder = "test",
-                    TextBody = "test",
-                    HtmlBody = "test"
-                },
-
-                new MailMessage
-                {
-                    Subject = "Test 3",
-                    Sender = "Person 3",
-                    Hash = "abc",
-                    Recipient = "abc",
-                    Date = DateTime.Now,
-                    Folder = "test",
-                    TextBody = "test",
-                    HtmlBody = "test"
-                }
-            );
+            using ArchiveContext context = new(serviceProvider.GetRequiredService<DbContextOptions<ArchiveContext>>());
+            if (Environment.GetEnvironmentVariable("SMA_DELETE_DATABASE") == "true")
+            {
+                /*
+                context.Database.EnsureDeleted();
+                context.Database.EnsureCreated();
+                context.MailMessages.AddRange(
+                    new MailMessage
+                    {
+                        Subject = "Test 1",
+                        Sender = "Person 1",
+                        Date = DateTime.Now,
+                    },
+                    new MailMessage
+                    {
+                        Subject = "Test 2",
+                        Sender = "Person 2",
+                        Date = DateTime.Now,
+                    },
+                    new MailMessage
+                    {
+                        Subject = "Test 3",
+                        Sender = "Person 3",
+                        Date = DateTime.Now,
+                    }
+                );
+                context.SaveChanges();
+                */
+            }
+            else
+            {
+                context.Database.Migrate();
+            }
         }
-    
-        context.SaveChanges();
     }
 }
