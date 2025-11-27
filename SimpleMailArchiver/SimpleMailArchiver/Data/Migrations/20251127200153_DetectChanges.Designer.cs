@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SimpleMailArchiver.Data;
 
@@ -10,9 +11,11 @@ using SimpleMailArchiver.Data;
 namespace SimpleMailArchiver.Data.Migrations
 {
     [DbContext(typeof(ArchiveContext))]
-    partial class ArchiveContextModelSnapshot : ModelSnapshot
+    [Migration("20251127200153_DetectChanges")]
+    partial class DetectChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
