@@ -18,22 +18,17 @@ public partial class MessageImportService
         var account = appContext.Accounts.First(item => item.AccountFilename == accountFilename);
 
         using var client = new ImapClient();
-        await client
-                .ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct)
-            ;
+        await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: progress.Ct);
         await client.AuthenticateAsync(account.Username, account.Password, progress.Ct);
 
         await using var context = await dbContextFactory.CreateDbContextAsync(progress.Ct);
-
-        var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct)
-            ;
+        var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: progress.Ct);
         try
         {
             foreach (var folder in folders)
             {
                 var folderOptions = account.FolderOptions?.FirstOrDefault(f => f.Name == folder.FullName);
-                if (folderOptions is { Exclude: true })
-                    continue;
+                if (folderOptions is { Exclude: true }) continue;
 
                 var archiveFolder = "";
                 if (account.BasePathInArchive != null && account.BasePathInArchive.Trim().TrimEnd('/') != string.Empty)
@@ -50,25 +45,20 @@ public partial class MessageImportService
 
                 var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, progress.Ct);
                 var msgUids = await folder.SearchAsync(SearchQuery.All, progress.Ct);
-                var messageSummaries = await folder
-                        .FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers,
-                            progress.Ct)
-                    ;
+                var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, progress.Ct);
                 var messageToDeleteIds = new List<UniqueId>();
                 var messagesOnServer = new List<string>();
 
                 var deleteAfterDays = account.DeleteAfterDays;
-                if (folderOptions is { DeleteAfterDays: not null })
-                    deleteAfterDays = (int)folderOptions.DeleteAfterDays;
+                if (folderOptions?.DeleteAfterDays is { } folderSpecificDeleteAfterDays)
+                    deleteAfterDays = folderSpecificDeleteAfterDays;
 
                 foreach (var messageSummary in messageSummaries)
                 {
                     progress.Ct.ThrowIfCancellationRequested();
 
-                    using var hmsg = new MimeMessage(messageSummary.Headers)
-                    {
-                        Date = (DateTimeOffset)messageSummary.InternalDate!
-                    };
+                    using var hmsg = new MimeMessage(messageSummary.Headers);
+                    hmsg.Date = (DateTimeOffset)messageSummary.InternalDate!;
                     var headerMsg = await MailParser.Construct(hmsg, archiveFolder, progress.Ct);
                     progress.ParsedMessageCount++;
 

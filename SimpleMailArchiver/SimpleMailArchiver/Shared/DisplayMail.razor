@@ -1,86 +1,182 @@
 ﻿@using System.Text.Json
 @using Microsoft.JSInterop
+@using Radzen
+@using Radzen.Blazor
 @using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Services
-@inject FileDownloadHelperContext DownloadHelperContext;
-@inject IJSRuntime JsRuntime;
+@inject DialogService DialogService
+@inject FileDownloadHelperContext DownloadHelperContext
+@inject IJSRuntime JsRuntime
 
-<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
-     aria-modal="true" role="dialog">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">@Message.Subject</h4>
-                <button type="button" class="close" @onclick="Download">Download</button>
-                <button type="button" class="close" @onclick="ModalCancel">Close</button>
-            </div>
-            <div class="modal-body">
-                <table class="table-responsive">
-                    <tr>
-                        <td>From</td>
-                        <td>@Message.Sender</td>
-                    </tr>
-                    <tr>
-                        <td>To</td>
-                        <td>@Message.Recipient</td>
-                    </tr>
-                    @if (Message.CcRecipient?.Trim() != string.Empty)
-                    {
-                        <tr>
-                            <td>CC</td>
-                            <td>@Message.CcRecipient</td>
-                        </tr>
-                    }
-                    @if (Message.BccRecipient?.Trim() != string.Empty)
-                    {
-                        <tr>
-                            <td>BCC</td>
-                            <td>@Message.BccRecipient</td>
-                        </tr>
-                    }
-                    @if (Message.Attachments?.Trim() != "[]")
-                    {
-                        <tr>
-                            <td>Attachments:</td>
-                            <td>
-                                @foreach (var attachment in JsonSerializer.Deserialize<List<string>>(Message.Attachments!)!)
-                                {
-                                    @attachment <br />
-                                }
-                            </td>
-                        </tr>
-                    }
-                </table>
-                <br /><br />
-                @if (Message.HtmlBody is not null)
+<RadzenStack Class="display-mail-root">
+
+    <!-- HEADER -->
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.SpaceBetween" Class="display-mail-header">
+
+        <RadzenHeading Size="H4">@Message.Subject</RadzenHeading>
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="10px" Class="action-buttons">
+            <RadzenButton Text="Download" Icon="download"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@Download"/>
+
+            <RadzenButton Text="Close" Icon="close"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Click="@CloseDialog"/>
+        </RadzenStack>
+
+    </RadzenStack>
+
+
+    <!-- MESSAGE META DATA -->
+    <RadzenPanel Style="max-height: 200px;" ExpandMode="PanelExpandMode.Single">
+        <HeaderTemplate>
+            <b>Message Details</b>
+        </HeaderTemplate>
+
+        <ChildContent>
+            <div class="rz-p-2 message-meta">
+
+                <RadzenRow Style="padding: 4px 0;">
+                    <RadzenColumn Size="3"><b>From:</b></RadzenColumn>
+                    <RadzenColumn>@Message.Sender</RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow Style="padding: 4px 0;">
+                    <RadzenColumn Size="3"><b>To:</b></RadzenColumn>
+                    <RadzenColumn>@Message.Recipient</RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow Style="padding: 4px 0;">
+                    <RadzenColumn Size="3"><b>Date:</b></RadzenColumn>
+                    <RadzenColumn>@Message.Date</RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow Style="padding: 4px 0;">
+                    <RadzenColumn Size="3"><b>Subject:</b></RadzenColumn>
+                    <RadzenColumn>@Message.Subject</RadzenColumn>
+                </RadzenRow>
+
+                @if (!string.IsNullOrWhiteSpace(Message.CcRecipient))
                 {
-                    @((MarkupString)Message.HtmlBody)
-                    
+                    <RadzenRow Style="padding: 4px 0;">
+                        <RadzenColumn Size="3"><b>CC:</b></RadzenColumn>
+                        <RadzenColumn>@Message.CcRecipient</RadzenColumn>
+                    </RadzenRow>
                 }
-                @if (Message.TextBody is not null)
+
+                @if (!string.IsNullOrWhiteSpace(Message.BccRecipient))
                 {
-                    @((MarkupString)Message.TextBody.Replace("\r\n", "<br/>").Replace("\n\r", "<br/>").Replace("\r", "<br/>").Replace("\n", "<br/>"))
+                    <RadzenRow Style="padding: 4px 0;">
+                        <RadzenColumn Size="3"><b>BCC:</b></RadzenColumn>
+                        <RadzenColumn>@Message.BccRecipient</RadzenColumn>
+                    </RadzenRow>
+                }
+
+                @if (Message.Attachments is not null && Message.Attachments.Trim() != "[]")
+                {
+                    <RadzenRow Style="padding: 4px 0;">
+                        <RadzenColumn Size="3"><b>Attachments:</b></RadzenColumn>
+                        <RadzenColumn>
+                            @foreach (var file in JsonSerializer.Deserialize<List<string>>(Message.Attachments!)!)
+                            {
+                                <div>@file</div>
+                            }
+                        </RadzenColumn>
+                    </RadzenRow>
                 }
             </div>
-        </div>
-    </div>
-</div>
+        </ChildContent>
 
-@code{
-    [Parameter]
-    public required MailMessage Message { get; set; }
+    </RadzenPanel>
 
-    [Parameter]
-    public EventCallback<bool> OnClose { get; set; }
-    private Task ModalCancel() => OnClose.InvokeAsync(false);
+
+    <!-- BODY (HTML / TEXT SWITCH) -->
+    <RadzenTabs Class="display-mail-tabs">
+        <Tabs>
+
+            @if (!string.IsNullOrWhiteSpace(Message.HtmlBody))
+            {
+                <RadzenTabsItem Text="HTML Body">
+                    <div class="tab-content">
+                        @((MarkupString)Message.HtmlBody)
+                    </div>
+                </RadzenTabsItem>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Message.TextBody))
+            {
+                <RadzenTabsItem Text="Text Body">
+                    <div class="tab-content">
+                        @((MarkupString)
+                        Message.TextBody
+                            .Replace("\r\n", "<br/>")
+                            .Replace("\n\r", "<br/>")
+                            .Replace("\r", "<br/>")
+                            .Replace("\n", "<br/>")
+                        )
+                    </div>
+                </RadzenTabsItem>
+            }
+        </Tabs>
+    </RadzenTabs>
+
+</RadzenStack>
+
+
+@code {
+    [Parameter] public required MailMessage Message { get; set; }
+
+    private void CloseDialog()
+        => DialogService.Close(false);
 
     private async Task Download()
     {
         await DownloadHelperContext.PrepareMessageForDownload(Message, CancellationToken.None);
-        await JsRuntime.InvokeAsync<object>("open", "download", "_blank");
+        await JsRuntime.InvokeVoidAsync("open", "download", "_blank");
     }
 
-    protected override void OnInitialized()
-    {
-    }
 }
+
+<style>
+    /* Flex root: füllt verfügbare Höhe und erlaubt flexibles Wachsen der Tabs */
+    .display-mail-root {
+        display: flex;
+        flex-direction: column;
+        height: 88vh; /* vorher max-height:88vh; jetzt feste Höhe für korrekte Flex-Behaviours */
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Header: Heading soll den verbleibenden Platz einnehmen, Buttons dürfen nicht wachsen */
+    .display-mail-header .rz-heading {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .action-buttons {
+        flex: 0 0 auto; /* nur so groß wie nötig */
+        gap: 10px;
+    }
+
+    /* Metadata: etwas Innenabstand unten, damit Text nicht an der Kante klebt */
+    .message-meta {
+        padding-bottom: 12px;
+    }
+
+    /* Tabs sollen wachsen, aber innerhalb des Flex-Layouts scrollbaren Inhalt haben */
+    .display-mail-tabs {
+        flex: 1 1 auto;
+        min-height: 0; /* wichtig, damit Kind-Overflow funktioniert */
+        margin-top: 12px;
+    }
+
+    /* Innerer Tab-Inhalt scrollt vollständig */
+    .tab-content {
+        height: 100%;
+        min-height: 0;
+        overflow: auto;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+</style>

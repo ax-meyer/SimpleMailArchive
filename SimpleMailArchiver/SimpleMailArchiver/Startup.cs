@@ -1,14 +1,7 @@
-using System.IO;
 using System.Text.Json;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using SimpleMailArchiver.Components;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Radzen;
+using SimpleMailArchiver.Components;
 using SimpleMailArchiver.Data;
 using SimpleMailArchiver.Services;
 using SimpleMailArchiver.Services.MessageImportService;
@@ -37,7 +30,6 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        
         services.AddRazorComponents().AddInteractiveServerComponents();
         // AppConfig
         services.AddSingleton(_appContext);

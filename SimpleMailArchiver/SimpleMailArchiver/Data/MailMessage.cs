@@ -5,7 +5,7 @@ using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Data;
 
-public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IComparable
+public record MailMessage
 {
     public long Id { get; init; }
     [Required] public required string Hash { get; set; }
@@ -26,97 +26,6 @@ public class MailMessage : IEquatable<MailMessage>, IComparable<MailMessage>, IC
     public int? NumberOfAttachments => string.IsNullOrEmpty(Attachments)
         ? null
         : JsonSerializer.Deserialize<string[]>(Attachments)?.Length;
-
-
-    public int CompareTo(MailMessage? other)
-    {
-        if (other is null)
-            return 1;
-        return Id < other.Id ? -1 : Id > other.Id ? 1 : 0;
-    }
-
-    public override bool Equals(object? obj)
-    {
-        switch (obj)
-        {
-            case null:
-                return false;
-            case MailMessage other:
-            {
-                var equal = true;
-                foreach (var prop in GetType().GetProperties())
-                {
-                    switch (prop.Name)
-                    {
-                        case nameof(Id):
-                            continue;
-                        case nameof(Date):
-                        {
-                            var first = Date;
-                            var second = other.Date;
-                            const string fmt = "dd.MM.yyyy-HH:mm:ss";
-                            equal = first.ToString(fmt) == second.ToString(fmt);
-                            break;
-                        }
-                        default:
-                            equal = prop.GetValue(this) == prop.GetValue(other);
-                            break;
-                    }
-                }
-
-                return equal;
-            }
-            default:
-                throw new InvalidDataException();
-        }
-    }
-
-    public bool Equals(MailMessage? other)
-    {
-        if (other is null)
-            return false;
-        return Equals((object)other);
-    }
-
-    public override int GetHashCode()
-    {
-        unchecked // Use unchecked block to allow overflow without throwing exceptions
-        {
-            var hash = 17;
-
-            // Include required properties in hash calculation
-            hash = hash * 31 + Hash.GetHashCode();
-            hash = hash * 31 + Subject.GetHashCode();
-            hash = hash * 31 + Sender.GetHashCode();
-            hash = hash * 31 + Recipient.GetHashCode();
-            hash = hash * 31 + (CcRecipient?.GetHashCode() ?? 0);
-            hash = hash * 31 + (BccRecipient?.GetHashCode() ?? 0);
-
-            // Format Date to ensure consistent hash contributions
-            hash = hash * 31 + Date.ToString("dd.MM.yyyy-HH:mm:ss").GetHashCode();
-
-            hash = hash * 31 + (Attachments?.GetHashCode() ?? 0);
-            hash = hash * 31 + Folder.GetHashCode();
-            if (TextBody is not null)
-            {
-                hash = hash * 31 + TextBody.GetHashCode();
-            }
-
-            if (HtmlBody is not null)
-            {
-                hash = hash * 31 + HtmlBody.GetHashCode();
-            }
-
-            return hash; // Return the accumulated hash
-        }
-    }
-
-    public int CompareTo(object? obj)
-    {
-        if (obj is not MailMessage other)
-            throw new ArgumentException("Object is not of type MailMessage");
-        return CompareTo(other);
-    }
 }
 
 public static class MailParser

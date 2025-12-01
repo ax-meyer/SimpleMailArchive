@@ -1,5 +1,3 @@
-using SimpleMailArchiver.Components;
-using Radzen;
 using SimpleMailArchiver;
 
 var builder = WebApplication.CreateBuilder(args);

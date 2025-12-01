@@ -1,21 +1,21 @@
 ﻿@page "/"
 @page "/browse"
-@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.EntityFrameworkCore
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
-@using Microsoft.AspNetCore.Components.Web
 @using SimpleMailArchiver.Shared
 
 <PageTitle>Mail Archive</PageTitle>
 @inject ArchiveContext DbContext;
+@inject DialogService DialogService;
 
 <h1>Mail Archive</h1>
-
 <RadzenDataGrid AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" FilterMode="FilterMode.Simple"
                 Data="@_messages">
     <Columns>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
@@ -40,33 +40,34 @@
                 }
             </Template>
         </RadzenDataGridColumn>
+        <RadzenDataGridColumn Sortable="@false" Filterable="@false">
+            <HeaderTemplate>
+            </HeaderTemplate>
+            <Template>
+                <RadzenButton Click="@(() => DisplayMessage(context))">Open</RadzenButton>
+            </Template>
+        </RadzenDataGridColumn>
 
     </Columns>
 </RadzenDataGrid>
 
-@if (_showMessage)
-{
-    <DisplayMail Message="@_selectedMessage" OnClose="@DisplayMailClosing"/>
-}
-
 @code {
     private IQueryable<MailMessage>? _messages;
-    private bool _showMessage;
-
-    private MailMessage? _selectedMessage;
-
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
+       
         _messages = DbContext.MailMessages;
     }
 
     private void DisplayMessage(MailMessage message)
     {
-        _selectedMessage = message ?? throw new ArgumentNullException(nameof(message));
-        _showMessage = true;
+        var dict = new Dictionary<string, object>
+        {
+            { "Message", message }
+        };
+         DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions(){ Width = "1200px", Height = "800px" });
     }
-
-    private void DisplayMailClosing() => _showMessage = false;
 }

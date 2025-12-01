@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="BlazorApp1/BlazorApp1.csproj" />
   <Project Path="SimpleMailArchiver/SimpleMailArchiver.csproj" />
 </Solution>
