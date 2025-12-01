@@ -14,13 +14,12 @@
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
                  JustifyContent="JustifyContent.SpaceBetween" Class="display-mail-header">
 
-        <RadzenHeading Size="H4">@Message.Subject</RadzenHeading>
+        <RadzenHeading Size="H4" Class="subject-heading">@Message.Subject</RadzenHeading>
 
         <RadzenStack Orientation="Orientation.Horizontal" Gap="10px" Class="action-buttons">
             <RadzenButton Text="Download" Icon="download"
                           ButtonStyle="ButtonStyle.Primary"
                           Click="@Download"/>
-
             <RadzenButton Text="Close" Icon="close"
                           ButtonStyle="ButtonStyle.Secondary"
                           Click="@CloseDialog"/>
@@ -28,74 +27,48 @@
 
     </RadzenStack>
 
-
     <!-- MESSAGE META DATA -->
-    <RadzenPanel Style="max-height: 200px;" ExpandMode="PanelExpandMode.Single">
+    <RadzenPanel ExpandMode="PanelExpandMode.Single" Class="message-panel">
         <HeaderTemplate>
             <b>Message Details</b>
         </HeaderTemplate>
 
         <ChildContent>
-            <div class="rz-p-2 message-meta">
-
-                <RadzenRow Style="padding: 4px 0;">
-                    <RadzenColumn Size="3"><b>From:</b></RadzenColumn>
-                    <RadzenColumn>@Message.Sender</RadzenColumn>
-                </RadzenRow>
-
-                <RadzenRow Style="padding: 4px 0;">
-                    <RadzenColumn Size="3"><b>To:</b></RadzenColumn>
-                    <RadzenColumn>@Message.Recipient</RadzenColumn>
-                </RadzenRow>
-
-                <RadzenRow Style="padding: 4px 0;">
-                    <RadzenColumn Size="3"><b>Date:</b></RadzenColumn>
-                    <RadzenColumn>@Message.Date</RadzenColumn>
-                </RadzenRow>
-
-                <RadzenRow Style="padding: 4px 0;">
-                    <RadzenColumn Size="3"><b>Subject:</b></RadzenColumn>
-                    <RadzenColumn>@Message.Subject</RadzenColumn>
-                </RadzenRow>
+            <div class="message-meta">
+                <DisplayMailMetaRow Label="From:" Value="@Message.Sender" />
+                <DisplayMailMetaRow Label="To:" Value="@Message.Recipient" />
+                <DisplayMailMetaRow Label="Date:" Value="@Message.Date" />
+                <DisplayMailMetaRow Label="Subject:" Value="@Message.Subject" />
 
                 @if (!string.IsNullOrWhiteSpace(Message.CcRecipient))
                 {
-                    <RadzenRow Style="padding: 4px 0;">
-                        <RadzenColumn Size="3"><b>CC:</b></RadzenColumn>
-                        <RadzenColumn>@Message.CcRecipient</RadzenColumn>
-                    </RadzenRow>
+                    <DisplayMailMetaRow Label="CC:" Value="@Message.CcRecipient" />
                 }
 
                 @if (!string.IsNullOrWhiteSpace(Message.BccRecipient))
                 {
-                    <RadzenRow Style="padding: 4px 0;">
-                        <RadzenColumn Size="3"><b>BCC:</b></RadzenColumn>
-                        <RadzenColumn>@Message.BccRecipient</RadzenColumn>
-                    </RadzenRow>
+                    <DisplayMailMetaRow Label="BCC:" Value="@Message.BccRecipient" />
                 }
 
-                @if (Message.Attachments is not null && Message.Attachments.Trim() != "[]")
+                @if (HasAttachments())
                 {
-                    <RadzenRow Style="padding: 4px 0;">
+                    <RadzenRow Class="meta-row">
                         <RadzenColumn Size="3"><b>Attachments:</b></RadzenColumn>
                         <RadzenColumn>
-                            @foreach (var file in JsonSerializer.Deserialize<List<string>>(Message.Attachments!)!)
+                            @foreach (var file in GetAttachments())
                             {
-                                <div>@file</div>
+                                <div class="attachment-file">@file</div>
                             }
                         </RadzenColumn>
                     </RadzenRow>
                 }
             </div>
         </ChildContent>
-
     </RadzenPanel>
-
 
     <!-- BODY (HTML / TEXT SWITCH) -->
     <RadzenTabs Class="display-mail-tabs">
         <Tabs>
-
             @if (!string.IsNullOrWhiteSpace(Message.HtmlBody))
             {
                 <RadzenTabsItem Text="HTML Body">
@@ -109,13 +82,7 @@
             {
                 <RadzenTabsItem Text="Text Body">
                     <div class="tab-content">
-                        @((MarkupString)
-                        Message.TextBody
-                            .Replace("\r\n", "<br/>")
-                            .Replace("\n\r", "<br/>")
-                            .Replace("\r", "<br/>")
-                            .Replace("\n", "<br/>")
-                        )
+                        @FormatTextBody()
                     </div>
                 </RadzenTabsItem>
             }
@@ -124,12 +91,10 @@
 
 </RadzenStack>
 
-
 @code {
     [Parameter] public required MailMessage Message { get; set; }
 
-    private void CloseDialog()
-        => DialogService.Close(false);
+    private void CloseDialog() => DialogService.Close(false);
 
     private async Task Download()
     {
@@ -137,46 +102,36 @@
         await JsRuntime.InvokeVoidAsync("open", "download", "_blank");
     }
 
+    private bool HasAttachments()
+        => Message.HasAttachments;
+
+    private IEnumerable<string> GetAttachments()
+    {
+        string attachments = Message.Attachments is null ? string.Empty : Message.Attachments;
+        if (string.IsNullOrWhiteSpace(attachments) || attachments.Trim() == "[]")
+            return Array.Empty<string>();
+
+        try
+        {
+            var list = JsonSerializer.Deserialize<List<string>>(attachments);
+            if (list == null) return new List<string> { attachments };
+            return list;
+        }
+        catch
+        {
+            return new List<string> { attachments };
+        }
+    }
+
+    private MarkupString FormatTextBody()
+    {
+        var raw = Message.TextBody ?? string.Empty;
+        var html = raw
+            .Replace("\r\n", "<br/>")
+            .Replace("\n\r", "<br/>")
+            .Replace("\r", "<br/>")
+            .Replace("\n", "<br/>");
+        return (MarkupString)html;
+    }
+
 }
-
-<style>
-    /* Flex root: füllt verfügbare Höhe und erlaubt flexibles Wachsen der Tabs */
-    .display-mail-root {
-        display: flex;
-        flex-direction: column;
-        height: 88vh; /* vorher max-height:88vh; jetzt feste Höhe für korrekte Flex-Behaviours */
-        padding: 20px;
-        box-sizing: border-box;
-    }
-
-    /* Header: Heading soll den verbleibenden Platz einnehmen, Buttons dürfen nicht wachsen */
-    .display-mail-header .rz-heading {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-    .action-buttons {
-        flex: 0 0 auto; /* nur so groß wie nötig */
-        gap: 10px;
-    }
-
-    /* Metadata: etwas Innenabstand unten, damit Text nicht an der Kante klebt */
-    .message-meta {
-        padding-bottom: 12px;
-    }
-
-    /* Tabs sollen wachsen, aber innerhalb des Flex-Layouts scrollbaren Inhalt haben */
-    .display-mail-tabs {
-        flex: 1 1 auto;
-        min-height: 0; /* wichtig, damit Kind-Overflow funktioniert */
-        margin-top: 12px;
-    }
-
-    /* Innerer Tab-Inhalt scrollt vollständig */
-    .tab-content {
-        height: 100%;
-        min-height: 0;
-        overflow: auto;
-        padding: 8px;
-        box-sizing: border-box;
-    }
-</style>

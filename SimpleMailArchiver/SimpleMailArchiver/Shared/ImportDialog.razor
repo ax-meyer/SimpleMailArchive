@@ -1,43 +1,37 @@
 ﻿@using Microsoft.JSInterop
 @using SimpleMailArchiver.Data
+@using Radzen
+@using Radzen.Blazor
 @inject IJSRuntime JsRuntime;
 
-<div class="modal fade show" id="myModal" style="display:block; background-color: rgba(10,10,10,.8);"
-     aria-modal="true" role="dialog">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Import</h4>
-                <button type="button" class="close" @onclick="@ModalCancel">Cancel</button>
-            </div>
-            <div class="modal-body">
-                <p role="status">@Progress.InfoMessage</p>
-                <table class="table-responsive">
-                    <tr>
-                        <td>Current Folder</td>
-                        <td style="padding-left: 10px !important">@Progress?.CurrentFolder</td>
-                    </tr>
-                    <tr>
-                        <td>Processed messages</td>
-                        <td style="padding-left: 10px !important">@Progress?.ParsedMessageCount</td>
-                    </tr>
-                    <tr>
-                        <td>Imported messages</td>
-                        <td style="padding-left: 10px !important">@Progress?.ImportedMessageCount</td>
-                    </tr>
-                    <tr>
-                        <td>Messages deleted on server</td>
-                        <td style="padding-left: 10px !important">@Progress?.RemoteMessagesDeletedCount</td>
-                    </tr>
-                    <tr>
-                        <td>Messages deleted locally</td>
-                        <td style="padding-left: 10px !important">@Progress?.LocalMessagesDeletedCount</td>
-                    </tr>
-                </table>
-            </div>
+<RadzenCard Style="max-width:800px;margin:40px auto;" Class="rz-card">
+    <ChildContent>
+        <div class="d-flex justify-content-between align-items-center">
+            <h4>Import</h4>
+            <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@ModalCancel" AriaLabel="Cancel import">Cancel</RadzenButton>
         </div>
-    </div>
-</div>
+
+        <div class="mt-3" aria-live="polite">
+            <RadzenText Value="@Progress.InfoMessage" Style="width:100%" Disabled="true" />
+        </div>
+
+        <div class="mt-3">
+            <RadzenProgressBar Value="@((Progress.TotalMessageCount == 0) ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)" ShowValue="true" Style="height:20px" />
+        </div>
+
+        <div class="mt-3">
+            <RadzenGrid Data="new[] { Progress }" TItem="ImportProgress" ShowPagination="false" ShowToolbar="false" Style="width:100%">
+                <Columns>
+                    <RadzenGridColumn TItem="ImportProgress" Property="CurrentFolder" Title="Current Folder" />
+                    <RadzenGridColumn TItem="ImportProgress" Property="ParsedMessageCount" Title="Processed messages" />
+                    <RadzenGridColumn TItem="ImportProgress" Property="ImportedMessageCount" Title="Imported messages" />
+                    <RadzenGridColumn TItem="ImportProgress" Property="RemoteMessagesDeletedCount" Title="Messages deleted on server" />
+                    <RadzenGridColumn TItem="ImportProgress" Property="LocalMessagesDeletedCount" Title="Messages deleted locally" />
+                </Columns>
+            </RadzenGrid>
+        </div>
+    </ChildContent>
+</RadzenCard>
 
 @code{
     [Parameter]

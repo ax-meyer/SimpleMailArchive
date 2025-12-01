@@ -1,0 +1,39 @@
+@using Radzen.Blazor
+
+@* Small reusable row for message metadata. Renders nothing when value is null/empty. *@
+@if (!ShouldRenderRow)
+{
+    @* nothing *@
+}
+else
+{
+    <RadzenRow Class="meta-row">
+        <RadzenColumn Size="3"><b>@Label</b></RadzenColumn>
+        <RadzenColumn>
+            @if (ChildContent != null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                @Value
+            }
+        </RadzenColumn>
+    </RadzenRow>
+}
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public object? Value { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool ShouldRenderRow
+    {
+        get
+        {
+            if (Value is null && ChildContent is null) return false;
+            if (Value is string s) return !string.IsNullOrWhiteSpace(s);
+            return true;
+        }
+    }
+}
