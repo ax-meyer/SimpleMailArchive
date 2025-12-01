@@ -19,8 +19,7 @@
         <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder"
-                              FilterMode="FilterMode.CheckBoxList"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder" FilterMode="FilterMode.CheckBoxList"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
             <HeaderTemplate>
                 <RadzenIcon Icon="attach_file"/>
@@ -60,6 +59,7 @@
 
        
         _messages = DbContext.MailMessages;
+        var folders = _messages.Select(m => m.Folder).Distinct();
     }
 
     private void DisplayMessage(MailMessage message)

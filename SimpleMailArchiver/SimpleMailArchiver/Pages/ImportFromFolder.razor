@@ -1,6 +1,7 @@
 ﻿@page "/import-folder"
 @using System.Diagnostics
 @using Microsoft.AspNetCore.Components.Web
+@using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Services.MessageImportService
@@ -12,39 +13,58 @@
 
 <PageTitle>Import mail from local folder</PageTitle>
 
-<h1>Import mail from folder on server</h1>
+<RadzenCard Style="max-width:900px;margin:20px auto;">
+    <ChildContent>
+        <h1>Import mail from folder on server</h1>
 
-<p>This will import emails from a folder with .eml files mounted to the @AppContext.PathConfig.ImportBasePath in the docker container.</p>
+        <p class="text-muted">This will import emails from a folder with .eml files mounted to the <strong>@AppContext.PathConfig.ImportBasePath</strong> in the docker container.</p>
 
-<p>Root folder name for the import in archive: <RadzenTextBox Value="@_rootImportPath"/></p>
-<p>The path the root folder in the archive the import folder will be mapped to.</p>
-<p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
+        <RadzenTemplateForm TItem="string" Data="_rootImportPath">
+            <div class="mb-3">
+                <label class="form-label">Root folder name for the import in archive</label>
+                <RadzenTextBox @bind-Value="_rootImportPath" Style="width:300px" AriaLabel="Root import path" />
+                <div class="form-text">E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders will be created under the inbox folder.</div>
+            </div>
 
-<p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@AppContext.ImportRunning">Import from folder</button>
-    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
-</p>
+            <div class="mb-3">
+                <RadzenButton Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@(()=> Task.Run(ImportFolder))" Disabled="@AppContext.ImportRunning">Import from folder</RadzenButton>
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Secondary" Click="@Cancel" Style="margin-left:8px;">Cancel</RadzenButton>
+            </div>
+        </RadzenTemplateForm>
 
-<p role="status">@AppContext.ImportProgress?.InfoMessage</p>
-<table class="table-responsive">
-    <tr>
-        <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.CurrentFolder</td>
-    </tr>
-    <tr>
-        <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ParsedMessageCount</td>
-    </tr>
-    <tr>
-        <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@AppContext.ImportProgress?.ImportedMessageCount</td>
-    </tr>
-</table>
+        <div class="mt-3" aria-live="polite">
+            <RadzenText Value="@AppContext.ImportProgress?.InfoMessage" Disabled="true" Style="width:100%" />
+        </div>
 
-@if (AppContext.ImportRunning)
-{
-    <ImportDialog Progress="@AppContext.ImportProgress" OnCancel="@Cancel" />
-}
+        <div class="mt-3">
+            <RadzenProgressBar Value="@((AppContext.ImportProgress?.TotalMessageCount == 0) ? 0 : (double)(AppContext.ImportProgress?.ImportedMessageCount ?? 0) / (AppContext.ImportProgress?.TotalMessageCount ?? 1) * 100)" ShowValue="true" Style="height:18px" />
+        </div>
+
+        <div class="mt-3">
+            <div class="table-responsive">
+                <table class="table">
+                    <tr>
+                        <td>Current Folder</td>
+                        <td>@AppContext.ImportProgress?.CurrentFolder</td>
+                    </tr>
+                    <tr>
+                        <td>Processed messages</td>
+                        <td>@AppContext.ImportProgress?.ParsedMessageCount</td>
+                    </tr>
+                    <tr>
+                        <td>Imported messages</td>
+                        <td>@AppContext.ImportProgress?.ImportedMessageCount</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        @if (AppContext.ImportRunning)
+        {
+            <ImportDialog Progress="@AppContext.ImportProgress" OnCancel="@Cancel" />
+        }
+    </ChildContent>
+</RadzenCard>
 
 
 @code {
@@ -119,4 +139,3 @@
         }
     }
 }
-

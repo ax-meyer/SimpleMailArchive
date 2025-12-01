@@ -1,8 +1,6 @@
-﻿@using Microsoft.JSInterop
-@using SimpleMailArchiver.Data
+﻿@using SimpleMailArchiver.Data
 @using Radzen
 @using Radzen.Blazor
-@inject IJSRuntime JsRuntime;
 
 <RadzenCard Style="max-width:800px;margin:40px auto;" Class="rz-card">
     <ChildContent>
@@ -19,16 +17,29 @@
             <RadzenProgressBar Value="@((Progress.TotalMessageCount == 0) ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)" ShowValue="true" Style="height:20px" />
         </div>
 
-        <div class="mt-3">
-            <RadzenGrid Data="new[] { Progress }" TItem="ImportProgress" ShowPagination="false" ShowToolbar="false" Style="width:100%">
-                <Columns>
-                    <RadzenGridColumn TItem="ImportProgress" Property="CurrentFolder" Title="Current Folder" />
-                    <RadzenGridColumn TItem="ImportProgress" Property="ParsedMessageCount" Title="Processed messages" />
-                    <RadzenGridColumn TItem="ImportProgress" Property="ImportedMessageCount" Title="Imported messages" />
-                    <RadzenGridColumn TItem="ImportProgress" Property="RemoteMessagesDeletedCount" Title="Messages deleted on server" />
-                    <RadzenGridColumn TItem="ImportProgress" Property="LocalMessagesDeletedCount" Title="Messages deleted locally" />
-                </Columns>
-            </RadzenGrid>
+        <div class="mt-3 table-responsive">
+            <table class="table">
+                <tr>
+                    <td>Current Folder</td>
+                    <td>@Progress?.CurrentFolder</td>
+                </tr>
+                <tr>
+                    <td>Processed messages</td>
+                    <td>@Progress?.ParsedMessageCount</td>
+                </tr>
+                <tr>
+                    <td>Imported messages</td>
+                    <td>@Progress?.ImportedMessageCount</td>
+                </tr>
+                <tr>
+                    <td>Messages deleted on server</td>
+                    <td>@Progress?.RemoteMessagesDeletedCount</td>
+                </tr>
+                <tr>
+                    <td>Messages deleted locally</td>
+                    <td>@Progress?.LocalMessagesDeletedCount</td>
+                </tr>
+            </table>
         </div>
     </ChildContent>
 </RadzenCard>
