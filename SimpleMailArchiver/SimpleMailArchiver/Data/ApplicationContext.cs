@@ -6,17 +6,16 @@ namespace SimpleMailArchiver.Data;
 public class ApplicationContext
 {
     public PathConfig PathConfig { get; }
-    public ImportProgress? ImportProgress { get; set; }
-    public bool ImportRunning { get; set; }
+    public ImportExecutor ImportExecutor { get; }
     public List<Account> Accounts { get; private set; }
 
-    public ApplicationContext(PathConfig config)
+    public ApplicationContext(PathConfig config, ILoggerFactory loggerFactory)
     {
         PathConfig = config;
         LoadAccounts();
+        ImportExecutor = new ImportExecutor(loggerFactory);
     }
     
-
     [MemberNotNull(nameof(Accounts))]
     private void LoadAccounts()
     {

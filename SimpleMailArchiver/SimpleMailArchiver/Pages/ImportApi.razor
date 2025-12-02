@@ -57,7 +57,7 @@
             {
                 try
                 {
-                    var progress = new ImportProgress(LoggerFactory);
+                    var progress = new ImportExecutor(LoggerFactory);
                     await MessageImportService.ImportFromServer(accountFilename, progress);
 
                     var msg = $"Import successful. Account {accountFilename}" +

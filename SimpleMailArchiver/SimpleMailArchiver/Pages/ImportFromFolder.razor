@@ -28,49 +28,19 @@
 
             <div class="mb-3">
                 <RadzenButton Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@(()=> Task.Run(ImportFolder))" Disabled="@AppContext.ImportRunning">Import from folder</RadzenButton>
-                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Secondary" Click="@Cancel" Style="margin-left:8px;">Cancel</RadzenButton>
             </div>
         </RadzenTemplateForm>
-
-        <div class="mt-3" aria-live="polite">
-            <RadzenText Value="@AppContext.ImportProgress?.InfoMessage" Disabled="true" Style="width:100%" />
-        </div>
-
-        <div class="mt-3">
-            <RadzenProgressBar Value="@((AppContext.ImportProgress?.TotalMessageCount == 0) ? 0 : (double)(AppContext.ImportProgress?.ImportedMessageCount ?? 0) / (AppContext.ImportProgress?.TotalMessageCount ?? 1) * 100)" ShowValue="true" Style="height:18px" />
-        </div>
-
-        <div class="mt-3">
-            <div class="table-responsive">
-                <table class="table">
-                    <tr>
-                        <td>Current Folder</td>
-                        <td>@AppContext.ImportProgress?.CurrentFolder</td>
-                    </tr>
-                    <tr>
-                        <td>Processed messages</td>
-                        <td>@AppContext.ImportProgress?.ParsedMessageCount</td>
-                    </tr>
-                    <tr>
-                        <td>Imported messages</td>
-                        <td>@AppContext.ImportProgress?.ImportedMessageCount</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-
+        
         @if (AppContext.ImportRunning)
         {
-            <ImportDialog Progress="@AppContext.ImportProgress" OnCancel="@Cancel" />
+            <ImportDialog Executor="@AppContext.ImportExecutor" />
         }
     </ChildContent>
 </RadzenCard>
 
 
 @code {
-    private CancellationTokenSource? _ctSource;
 
-    private void Cancel() => _ctSource?.Cancel();
     private string _rootImportPath = "inbox/";
 
     private async Task ImportFolder()
@@ -78,20 +48,16 @@
         if (AppContext.ImportRunning)
             return;
 
-        _ctSource = new CancellationTokenSource();
-        AppContext.ImportProgress = new ImportProgress(LoggerFactory)
-        {
-            Ct = _ctSource.Token
-        };
+        AppContext.ImportExecutor = new ImportExecutor(LoggerFactory);
         var emlPaths = Directory.GetFiles(AppContext.PathConfig.ImportBasePath, "*.eml", SearchOption.AllDirectories);
 
         if (emlPaths.Length == 0)
         {
-            AppContext.ImportProgress.InfoMessage = $"No .eml files found for import in {AppContext.PathConfig.ImportBasePath}";
+            AppContext.ImportExecutor.InfoMessage = $"No .eml files found for import in {AppContext.PathConfig.ImportBasePath}";
             return;
         }
 
-        AppContext.ImportProgress.TotalMessageCount = emlPaths.Length;
+        AppContext.ImportExecutor.TotalMessageCount = emlPaths.Length;
 
         await InvokeAsync(StateHasChanged);
 
@@ -100,37 +66,37 @@
 
         try
         {
-            AppContext.ImportProgress.InfoMessage = "Import starting, please wait...";
+            AppContext.ImportExecutor.InfoMessage = "Import starting, please wait...";
             watch.Start();
 
-            var mailTask = MessageImportService.ImportFromFolder(emlPaths, AppContext.PathConfig.ImportBasePath, AppContext.ImportProgress);
+            var mailTask = MessageImportService.ImportFromFolder(emlPaths, AppContext.PathConfig.ImportBasePath, AppContext.ImportExecutor);
 
             while (!mailTask.IsCompleted)
             {
-                AppContext.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
+                AppContext.ImportExecutor.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
                 await InvokeAsync(StateHasChanged);
                 Thread.Sleep(1000);
             }
 
             await mailTask;
 
-            AppContext.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
+            AppContext.ImportExecutor.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
         }
         catch (OperationCanceledException)
         {
-            AppContext.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
+            AppContext.ImportExecutor.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
         }
         catch (InvalidDataException)
         {
-            AppContext.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
+            AppContext.ImportExecutor.InfoMessage = "Import failed: Internal error: Hash Mismatch";
         }
         catch (ArgumentException ex)
         {
-            AppContext.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
+            AppContext.ImportExecutor.InfoMessage = $"Import failed: {ex.Message}";
         }
         catch (Exception ex)
         {
-            AppContext.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
+            AppContext.ImportExecutor.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
         }
         finally
         {

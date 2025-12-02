@@ -11,15 +11,35 @@
 @inject ArchiveContext DbContext;
 @inject DialogService DialogService;
 
-<h1>Mail Archive</h1>
-<RadzenDataGrid AllowPaging="@true" AllowSorting="@true" AllowFiltering="@true" FilterMode="FilterMode.Simple"
-                Data="@_messages">
+<RadzenHeading>Mail Archive</RadzenHeading>
+
+<RadzenDataGrid 
+    @ref="@_messagesGrid"
+    AllowPaging="@true" 
+    AllowSorting="@true"
+    AllowFiltering="@true"
+    FilterMode="FilterMode.SimpleWithMenu"
+    AllowVirtualization="@false"
+    FilterPopupRenderMode="PopupRenderMode.OnDemand"
+    LogicalFilterOperator="LogicalFilterOperator.And"
+    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+    AllowColumnResize="@true"
+    AllowAlternatingRows="@true"
+    PageSizeOptions="@(new []{10,25,50,100,250,500,1000})"
+    Cou
+    Data="@_messages">
     <Columns>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending">
+            <GroupFooterTemplate>
+                Showing <b>@_messages!.AsQueryable().Where(_messagesGrid!.ColumnsCollection).Count()</b> of <b>@_messages!.Count()</b> messages    
+            </GroupFooterTemplate>
+            
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder" FilterMode="FilterMode.CheckBoxList"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder"
+                              FilterMode="FilterMode.CheckBoxList"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
             <HeaderTemplate>
                 <RadzenIcon Icon="attach_file"/>
@@ -52,14 +72,17 @@
 
 @code {
     private IQueryable<MailMessage>? _messages;
-    
+    private RadzenDataGrid<MailMessage>? _messagesGrid;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-       
+
         _messages = DbContext.MailMessages;
-        var folders = _messages.Select(m => m.Folder).Distinct();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var folders = _messages.Count();
+        sw.Stop();
     }
 
     private void DisplayMessage(MailMessage message)
@@ -68,6 +91,7 @@
         {
             { "Message", message }
         };
-         DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions(){ Width = "1200px", Height = "800px" });
+        DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions() { Width = "1200px", Height = "800px" });
     }
+
 }

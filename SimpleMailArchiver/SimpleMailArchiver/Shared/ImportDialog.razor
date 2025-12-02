@@ -10,34 +10,34 @@
         </div>
 
         <div class="mt-3" aria-live="polite">
-            <RadzenText Value="@Progress.InfoMessage" Style="width:100%" Disabled="true" />
+            <RadzenText Value="@Executor.InfoMessage" Style="width:100%" Disabled="true" />
         </div>
 
         <div class="mt-3">
-            <RadzenProgressBar Value="@((Progress.TotalMessageCount == 0) ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)" ShowValue="true" Style="height:20px" />
+            <RadzenProgressBar Value="@((Executor.TotalMessageCount == 0) ? 0 : (double)Executor.ImportedMessageCount / Executor.TotalMessageCount * 100)" ShowValue="true" Style="height:20px" />
         </div>
 
         <div class="mt-3 table-responsive">
             <table class="table">
                 <tr>
                     <td>Current Folder</td>
-                    <td>@Progress?.CurrentFolder</td>
+                    <td>@Executor?.CurrentFolder</td>
                 </tr>
                 <tr>
                     <td>Processed messages</td>
-                    <td>@Progress?.ParsedMessageCount</td>
+                    <td>@Executor?.ParsedMessageCount</td>
                 </tr>
                 <tr>
                     <td>Imported messages</td>
-                    <td>@Progress?.ImportedMessageCount</td>
+                    <td>@Executor?.ImportedMessageCount</td>
                 </tr>
                 <tr>
                     <td>Messages deleted on server</td>
-                    <td>@Progress?.RemoteMessagesDeletedCount</td>
+                    <td>@Executor?.RemoteMessagesDeletedCount</td>
                 </tr>
                 <tr>
                     <td>Messages deleted locally</td>
-                    <td>@Progress?.LocalMessagesDeletedCount</td>
+                    <td>@Executor?.LocalMessagesDeletedCount</td>
                 </tr>
             </table>
         </div>
@@ -46,11 +46,9 @@
 
 @code{
     [Parameter]
-    public required ImportProgress Progress { get; set; }
+    public required ImportExecutor Executor { get; set; }
 
-    [Parameter]
-    public EventCallback<bool> OnCancel { get; set; }
-    private Task ModalCancel() => OnCancel.InvokeAsync(false);
+    private async Task ModalCancel() => await Executor.Cts.CancelAsync();
 
     protected override void OnInitialized()
     {
