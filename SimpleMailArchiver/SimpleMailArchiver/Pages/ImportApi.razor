@@ -9,16 +9,16 @@
 
 
 @code {
-     private ILogger<ImportApi>? _logger;
+    private ILogger<ImportApi> _logger = null!;
 
-    protected override async void OnInitialized()
+    protected override void OnInitialized()
     {
         _logger = LoggerFactory.CreateLogger<ImportApi>();
-        if (AppContext.ImportRunning)
-            return;
-        AppContext.ImportRunning = true;
-        _logger.LogInformation("Starting api import");
+        AppContext.ImportManager.Start(async (progress, ct) => await ExecuteImport(progress, ct));
+    }
 
+    private async Task ExecuteImport(ImportProgress progress, CancellationToken ct)
+    {
         var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
         _logger.LogInformation("called URI {Uri}", uri);
 
@@ -38,7 +38,6 @@
             catch (Exception ex)
             {
                 _logger.LogError("Calling {CallBackUrl} failed with error {ExMessage}", callBackUrl, ex.Message);
-                AppContext.ImportRunning = false;
                 return;
             }
         }
@@ -57,14 +56,13 @@
             {
                 try
                 {
-                    var progress = new ImportExecutor(LoggerFactory);
-                    await MessageImportService.ImportFromServer(accountFilename, progress);
+                    await MessageImportService.ImportFromServer(accountFilename, progress, ct);
 
                     var msg = $"Import successful. Account {accountFilename}" +
-                        $"\nParsed: {progress.ParsedMessageCount}" +
-                        $"\nImported : {progress.ImportedMessageCount}" +
-                        $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
-                        $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
+                              $"\nParsed: {progress.ParsedMessageCount}" +
+                              $"\nImported : {progress.ImportedMessageCount}" +
+                              $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
+                              $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
 
                     if (callBackUrl != string.Empty)
                         await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None);
@@ -77,10 +75,6 @@
 
                     if (callBackUrl != string.Empty)
                         await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
-                }
-                finally
-                {
-                    AppContext.ImportRunning = false;
                 }
             }
             else
@@ -99,15 +93,13 @@
             if (callBackUrl != string.Empty)
                 await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
         }
-
-        AppContext.ImportRunning = false;
     }
 
     private async Task HttpGetRetry(HttpClient client, string url, int retries, CancellationToken token = default)
     {
         var counter = 0;
         var retry = true;
-        while(retry)
+        while (retry)
         {
             try
             {
@@ -141,4 +133,4 @@
         }
     }
 
-    }
+}

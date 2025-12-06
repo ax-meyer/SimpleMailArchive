@@ -51,15 +51,15 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
 
         token.ThrowIfCancellationRequested();
 
-        await context.AddAsync(mailMessage, token);
+        await context.AddAsync(mailMessage, CancellationToken.None);
 
         var emlPath = GetEmlPath(mailMessage);
         var parentFolder = Path.GetDirectoryName(emlPath);
         if (parentFolder is null) throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
 
         Directory.CreateDirectory(parentFolder);
-        await mimeMessage.WriteToAsync(emlPath, token);
-        await context.SaveChangesAsync(token);
+        await mimeMessage.WriteToAsync(emlPath, CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
         return true;
     }
 }

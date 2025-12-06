@@ -1,12 +1,10 @@
 ﻿@page "/import-folder"
-@using System.Diagnostics
 @using Microsoft.AspNetCore.Components.Web
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Services.MessageImportService
 @using SimpleMailArchiver.Shared
-@inject ILoggerFactory LoggerFactory;
 @inject MessageImportService MessageImportService;
 @inject ApplicationContext AppContext;
 
@@ -17,23 +15,28 @@
     <ChildContent>
         <h1>Import mail from folder on server</h1>
 
-        <p class="text-muted">This will import emails from a folder with .eml files mounted to the <strong>@AppContext.PathConfig.ImportBasePath</strong> in the docker container.</p>
+        <p class="text-muted">This will import emails from a folder with .eml files mounted to the
+            <strong>@AppContext.PathConfig.ImportBasePath</strong> in the docker container.</p>
 
         <RadzenTemplateForm TItem="string" Data="_rootImportPath">
             <div class="mb-3">
                 <label class="form-label">Root folder name for the import in archive</label>
-                <RadzenTextBox @bind-Value="_rootImportPath" Style="width:300px" AriaLabel="Root import path" />
-                <div class="form-text">E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders will be created under the inbox folder.</div>
+                <RadzenTextBox @bind-Value="_rootImportPath" Style="width:300px" AriaLabel="Root import path"/>
+                <div class="form-text">E.g.: If you enter "inbox/", all emails from the import folder will be put in the
+                    inbox folder of the archive. Subfolders will be created under the inbox folder.
+                </div>
             </div>
 
             <div class="mb-3">
-                <RadzenButton Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@(()=> Task.Run(ImportFolder))" Disabled="@AppContext.ImportRunning">Import from folder</RadzenButton>
+                <RadzenButton Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@(() => Task.Run(ImportFolder))"
+                              Disabled="@AppContext.ImportManager.IsRunning">Import from folder
+                </RadzenButton>
             </div>
         </RadzenTemplateForm>
-        
-        @if (AppContext.ImportRunning)
+
+        @if (AppContext.ImportManager.IsRunning)
         {
-            <ImportDialog Executor="@AppContext.ImportExecutor" />
+            <ImportDialog/>
         }
     </ChildContent>
 </RadzenCard>
@@ -43,65 +46,9 @@
 
     private string _rootImportPath = "inbox/";
 
-    private async Task ImportFolder()
+    private void ImportFolder()
     {
-        if (AppContext.ImportRunning)
-            return;
-
-        AppContext.ImportExecutor = new ImportExecutor(LoggerFactory);
-        var emlPaths = Directory.GetFiles(AppContext.PathConfig.ImportBasePath, "*.eml", SearchOption.AllDirectories);
-
-        if (emlPaths.Length == 0)
-        {
-            AppContext.ImportExecutor.InfoMessage = $"No .eml files found for import in {AppContext.PathConfig.ImportBasePath}";
-            return;
-        }
-
-        AppContext.ImportExecutor.TotalMessageCount = emlPaths.Length;
-
-        await InvokeAsync(StateHasChanged);
-
-        var watch = new Stopwatch();
-        var fmt = @"hh\:mm\:ss";
-
-        try
-        {
-            AppContext.ImportExecutor.InfoMessage = "Import starting, please wait...";
-            watch.Start();
-
-            var mailTask = MessageImportService.ImportFromFolder(emlPaths, AppContext.PathConfig.ImportBasePath, AppContext.ImportExecutor);
-
-            while (!mailTask.IsCompleted)
-            {
-                AppContext.ImportExecutor.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
-                await InvokeAsync(StateHasChanged);
-                Thread.Sleep(1000);
-            }
-
-            await mailTask;
-
-            AppContext.ImportExecutor.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
-        }
-        catch (OperationCanceledException)
-        {
-            AppContext.ImportExecutor.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
-        }
-        catch (InvalidDataException)
-        {
-            AppContext.ImportExecutor.InfoMessage = "Import failed: Internal error: Hash Mismatch";
-        }
-        catch (ArgumentException ex)
-        {
-            AppContext.ImportExecutor.InfoMessage = $"Import failed: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            AppContext.ImportExecutor.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
-        }
-        finally
-        {
-            AppContext.ImportRunning = false;
-            await InvokeAsync(StateHasChanged);
-        }
+        AppContext.ImportManager.Start((progress, ct) => MessageImportService.ImportFromFolder(AppContext.PathConfig.ImportBasePath, _rootImportPath, progress, ct));
     }
+
 }

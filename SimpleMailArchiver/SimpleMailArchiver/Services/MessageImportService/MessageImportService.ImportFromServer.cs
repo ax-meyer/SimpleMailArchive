@@ -10,19 +10,18 @@ namespace SimpleMailArchiver.Services.MessageImportService;
 
 public partial class MessageImportService
 {
-    public async Task ImportFromServer(string accountFilename, ImportExecutor executor)
+    public async Task ImportFromServer(string accountFilename, ImportProgress progress, CancellationToken ct)
     {
         _logger.LogInformation("Starting import from server on {AccountFilename}", accountFilename);
-        appContext.ImportRunning = true;
 
         var account = appContext.Accounts.First(item => item.AccountFilename == accountFilename);
 
         using var client = new ImapClient();
-        await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: executor.Ct);
-        await client.AuthenticateAsync(account.Username, account.Password, executor.Ct);
+        await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: ct);
+        await client.AuthenticateAsync(account.Username, account.Password, ct);
 
-        await using var context = await dbContextFactory.CreateDbContextAsync(executor.Ct);
-        var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: executor.Ct);
+        await using var context = await dbContextFactory.CreateDbContextAsync(ct);
+        var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: ct);
         try
         {
             foreach (var folder in folders)
@@ -39,13 +38,13 @@ public partial class MessageImportService
                 else
                     archiveFolder += folder.FullName;
 
-                executor.Ct.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
-                executor.CurrentFolder = folder.FullName;
+                progress.Report(new ProgressData(CurrentFolder: folder.FullName));
 
-                var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, executor.Ct);
-                var msgUids = await folder.SearchAsync(SearchQuery.All, executor.Ct);
-                var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, executor.Ct);
+                var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, ct);
+                var msgUids = await folder.SearchAsync(SearchQuery.All, ct);
+                var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, ct);
                 var messageToDeleteIds = new List<UniqueId>();
                 var messagesOnServer = new List<string>();
 
@@ -55,12 +54,12 @@ public partial class MessageImportService
 
                 foreach (var messageSummary in messageSummaries)
                 {
-                    executor.Ct.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
 
                     using var hmsg = new MimeMessage(messageSummary.Headers);
                     hmsg.Date = (DateTimeOffset)messageSummary.InternalDate!;
-                    var headerMsg = await MailParser.Construct(hmsg, archiveFolder, executor.Ct);
-                    executor.ParsedMessageCount++;
+                    var headerMsg = await MailParser.Construct(hmsg, archiveFolder, ct);
+                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount+1));
 
                     // mark message to be deleted if meets the deletion date.
                     // delete will only be executed if whole folder is processed successfully.
@@ -71,7 +70,7 @@ public partial class MessageImportService
 
                     // check if message is already in archive
                     var existingMsg = await context.MailMessages
-                        .FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, executor.Ct);
+                        .FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, ct);
                     if (existingMsg != null)
                     {
                         // check if message is now in different folder on the server
@@ -84,20 +83,22 @@ public partial class MessageImportService
                             var dirName = Path.GetDirectoryName(newEmlPath);
                             Directory.CreateDirectory(dirName!);
                             File.Move(oldEmlPath, newEmlPath);
-                            await context.SaveChangesAsync();
+                            await context.SaveChangesAsync(CancellationToken.None);
                         }
 
                         continue;
                     }
 
-                    using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, executor.Ct);
+                    using var msg = await folder.GetMessageAsync(messageSummary.UniqueId, ct);
                     msg.Date = (DateTimeOffset)messageSummary.InternalDate;
 
-                    var saved = await messageHelperService.SaveMessage(msg, executor.CurrentFolder, executor.Ct);
-                    executor.ParsedMessageCount++;
+                    var saved = await messageHelperService.SaveMessage(msg, folder.FullName, ct);
+                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount+1));
+
 
                     if (saved)
-                        executor.ImportedMessageCount++;
+                        progress.Report(new ProgressData(ImportedMessageCount: progress.ImportedMessageCount+1));
+
                 }
 
                 // delete messages marked for deletion.
@@ -106,10 +107,11 @@ public partial class MessageImportService
 #if DEBUG
                     _logger.LogInformation("Debug mode, not deleting on server");
 #else
-                        //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, progress.Ct);
-                        //await folder.ExpungeAsync(progress.Ct);
+                        //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, ct);
+                        //await folder.ExpungeAsync(ct);
 #endif
-                    executor.RemoteMessagesDeletedCount += messageToDeleteIds.Count;
+                    progress.Report(new ProgressData(RemoteMessagesDeletedCount: progress.RemoteMessagesDeletedCount + messageToDeleteIds.Count));
+
                 }
 
                 if (folderOptions is { SyncServerFolder: true })
@@ -135,8 +137,9 @@ public partial class MessageImportService
                         }
 
                         context.MailMessages.RemoveRange(deletedMessages);
-                        await context.SaveChangesAsync();
-                        executor.LocalMessagesDeletedCount += deletedMessages.Count;
+                        await context.SaveChangesAsync(CancellationToken.None);
+                        progress.Report(new ProgressData(LocalMessagesDeletedCount: progress.LocalMessagesDeletedCount + deletedMessages.Count));
+
                     }
                 }
             }
@@ -145,8 +148,7 @@ public partial class MessageImportService
         }
         finally
         {
-            await context.SaveChangesAsync(executor.Ct);
-            appContext.ImportRunning = false;
+            await context.SaveChangesAsync(ct);
         }
     }
 }

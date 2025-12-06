@@ -6,14 +6,14 @@ namespace SimpleMailArchiver.Data;
 public class ApplicationContext
 {
     public PathConfig PathConfig { get; }
-    public ImportExecutor ImportExecutor { get; }
+    public ImportManager ImportManager { get; }
     public List<Account> Accounts { get; private set; }
 
     public ApplicationContext(PathConfig config, ILoggerFactory loggerFactory)
     {
         PathConfig = config;
         LoadAccounts();
-        ImportExecutor = new ImportExecutor(loggerFactory);
+        ImportManager = new ImportManager(loggerFactory);
     }
     
     [MemberNotNull(nameof(Accounts))]

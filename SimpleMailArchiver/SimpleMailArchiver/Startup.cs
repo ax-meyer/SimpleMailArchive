@@ -10,52 +10,53 @@ namespace SimpleMailArchiver;
 
 public class Startup
 {
-    public IConfiguration ConfigRoot { get; }
-    private readonly ApplicationContext _appContext;
+    private IConfiguration ConfigRoot { get; }
+    private readonly PathConfig _appConfig;
 
     public Startup(IConfiguration configuration)
     {
-        var appConfig = new PathConfig();
-        configuration.Bind("Paths", appConfig);
+        _appConfig = new PathConfig();
+        configuration.Bind("Paths", _appConfig);
         if (configuration["Paths"] is null)
         {
             var configFile = "config.json";
             if (!File.Exists(configFile)) throw new Exception();
-            appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile));
-            if (appConfig is null) throw new Exception();
+            _appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile)) ?? throw new Exception();
         }
+
         ConfigRoot = configuration;
-        _appContext = new ApplicationContext(appConfig);
     }
 
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddRazorComponents().AddInteractiveServerComponents();
+
         // AppConfig
-        services.AddSingleton(_appContext);
+        services.AddSingleton(_appConfig);
+        services.AddSingleton<ApplicationContext>();
         services.AddScoped<FileDownloadHelperContext>();
         services.AddScoped<MailMessageHelperService>();
 
         // Set up directories
-        if (!Directory.Exists(_appContext.PathConfig.ArchiveBasePath))
-            Directory.CreateDirectory(_appContext.PathConfig.ArchiveBasePath);
-        if (!Directory.Exists(_appContext.PathConfig.DbPath))
-            Directory.CreateDirectory(_appContext.PathConfig.DbPath);
+        if (!Directory.Exists(_appConfig.ArchiveBasePath))
+            Directory.CreateDirectory(_appConfig.ArchiveBasePath);
+        if (!Directory.Exists(_appConfig.DbPath))
+            Directory.CreateDirectory(_appConfig.DbPath);
 
         // Database
-        var connectionString = $"DataSource={_appContext.PathConfig.DbPath}/archive.db";
+        var connectionString = $"DataSource={_appConfig.DbPath}/archive.db";
         services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
 
         services.AddScoped<MessageImportService>();
 
         // Logging
         services.AddLogging();
-        
+
         // Other
         services.AddRazorPages();
         services.AddServerSideBlazor();
         services.AddLocalization();
-        
+
         services.AddRadzenComponents();
         services.AddRadzenQueryStringThemeService();
     }
@@ -88,11 +89,17 @@ public class Startup
         app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
         app.Logger.LogInformation(
-            "Using conifg:\n\t" +
-            $"Account configs path: {_appContext.PathConfig.AccountConfigsPath}\n\t" +
-            $"Import base path: {_appContext.PathConfig.ImportBasePath}\n\t" +
-            $"Archive base path: {_appContext.PathConfig.ArchiveBasePath}\n\t" +
-            $"Database path: {_appContext.PathConfig.DbPath}"
+            """
+                        Using conifg:
+                        Account configs path: {AccountConfigsPath}
+                        Import base path: {ImportBasePath}
+                        Archive base path: {ArchiveBasePath}
+                        Database path: {DbPath}
+            """,
+            _appConfig.AccountConfigsPath,
+            _appConfig.ImportBasePath,
+            _appConfig.ArchiveBasePath,
+            _appConfig.DbPath
         );
     }
 }
