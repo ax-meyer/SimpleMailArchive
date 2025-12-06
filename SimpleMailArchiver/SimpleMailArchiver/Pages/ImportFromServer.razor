@@ -1,6 +1,4 @@
 ﻿@page "/import-server"
-@using System.Diagnostics
-@using Microsoft.AspNetCore.Components.Web
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
@@ -10,11 +8,9 @@
 @inject MessageImportService MessageImportService;
 @inject ApplicationContext AppContext;
 
-<PageTitle>Import mail from online account</PageTitle>
-
 <RadzenCard Style="max-width:900px;margin:20px auto;">
     <ChildContent>
-        <h1>Import from mailserver</h1>
+        <h3>Import from mailserver</h3>
 
         <div class="mb-3">
             <label class="form-label">Select account</label>
@@ -30,7 +26,7 @@
 
         @if (AppContext.ImportManager.IsRunning)
         {
-            <ImportDialog />
+            <ImportDialog/>
         }
     </ChildContent>
 </RadzenCard>
@@ -50,4 +46,5 @@
         if (_selectedAccountFilename == null) throw new ArgumentException("No valid account selected.");
         AppContext.ImportManager.Start((progress, ct) => MessageImportService.ImportFromServer(_selectedAccountFilename, progress, ct));
     }
+
 }

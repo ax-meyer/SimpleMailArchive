@@ -1,5 +1,4 @@
 ﻿@page "/import-folder"
-@using Microsoft.AspNetCore.Components.Web
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
@@ -8,12 +7,9 @@
 @inject MessageImportService MessageImportService;
 @inject ApplicationContext AppContext;
 
-
-<PageTitle>Import mail from local folder</PageTitle>
-
 <RadzenCard Style="max-width:900px;margin:20px auto;">
     <ChildContent>
-        <h1>Import mail from folder on server</h1>
+        <h3>Import mail from folder on server</h3>
 
         <p class="text-muted">This will import emails from a folder with .eml files mounted to the
             <strong>@AppContext.PathConfig.ImportBasePath</strong> in the docker container.</p>

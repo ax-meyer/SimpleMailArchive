@@ -20,9 +20,6 @@
             <RadzenButton Text="Download" Icon="download"
                           ButtonStyle="ButtonStyle.Primary"
                           Click="@Download"/>
-            <RadzenButton Text="Close" Icon="close"
-                          ButtonStyle="ButtonStyle.Secondary"
-                          Click="@CloseDialog"/>
         </RadzenStack>
 
     </RadzenStack>
@@ -93,9 +90,7 @@
 
 @code {
     [Parameter] public required MailMessage Message { get; set; }
-
-    private void CloseDialog() => DialogService.Close(false);
-
+    
     private async Task Download()
     {
         await DownloadHelperContext.PrepareMessageForDownload(Message, CancellationToken.None);
@@ -125,7 +120,7 @@
 
     private MarkupString FormatTextBody()
     {
-        var raw = Message.TextBody ?? string.Empty;
+        var raw = Message.TextBody;
         var html = raw
             .Replace("\r\n", "<br/>")
             .Replace("\n\r", "<br/>")

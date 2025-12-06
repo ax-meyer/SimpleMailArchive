@@ -7,15 +7,15 @@
 @using SimpleMailArchiver.Data
 @using SimpleMailArchiver.Shared
 
-<PageTitle>Mail Archive</PageTitle>
 @inject ArchiveContext DbContext;
 @inject DialogService DialogService;
 
-<RadzenHeading>Mail Archive</RadzenHeading>
+<h3>Mail Archive</h3>
 
-<RadzenDataGrid 
+
+<RadzenDataGrid
     @ref="@_messagesGrid"
-    AllowPaging="@true" 
+    AllowPaging="@true"
     AllowSorting="@true"
     AllowFiltering="@true"
     FilterMode="FilterMode.SimpleWithMenu"
@@ -25,15 +25,16 @@
     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
     AllowColumnResize="@true"
     AllowAlternatingRows="@true"
-    PageSizeOptions="@(new []{10,25,50,100,250,500,1000})"
+    PageSizeOptions="@(new[] { 10, 25, 50, 100, 250, 500, 1000 })"
     Cou
     Data="@_messages">
     <Columns>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending">
             <GroupFooterTemplate>
-                Showing <b>@_messages!.AsQueryable().Where(_messagesGrid!.ColumnsCollection).Count()</b> of <b>@_messages!.Count()</b> messages    
+                Showing <b>@_messages!.AsQueryable().Where(_messagesGrid!.ColumnsCollection).Count()</b> of
+                <b>@_messages!.Count()</b> messages
             </GroupFooterTemplate>
-            
+
         </RadzenDataGridColumn>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
