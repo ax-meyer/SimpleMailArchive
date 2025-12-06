@@ -107,8 +107,8 @@ public partial class MessageImportService
 #if DEBUG
                     _logger.LogInformation("Debug mode, not deleting on server");
 #else
-                        //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, ct);
-                        //await folder.ExpungeAsync(ct);
+                        await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, ct);
+                        await folder.ExpungeAsync(ct);
 #endif
                     progress.Report(new ProgressData(
                         RemoteMessagesDeletedCount: progress.RemoteMessagesDeletedCount + messageToDeleteIds.Count));

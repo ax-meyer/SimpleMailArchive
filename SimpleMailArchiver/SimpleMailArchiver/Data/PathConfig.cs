@@ -2,11 +2,11 @@
 
 public record class PathConfig
 {
-    public string ArchiveBasePath { get; init; } = "";
+    public string ArchiveBasePath { get; init; } = "/etc/mailarchive";
 
-    public string ImportBasePath { get; init; } = "";
+    public string ImportBasePath { get; init; } = "/etc/mailimport";
 
-    public string AccountConfigsPath { get; init; } = "";
+    public string AccountConfigsPath { get; init; } = "/etc/mailaccounts";
 
-    public string DbPath { get; init; } = "";
+    public string DbPath { get; init; } = "/etc/maildb";
 }

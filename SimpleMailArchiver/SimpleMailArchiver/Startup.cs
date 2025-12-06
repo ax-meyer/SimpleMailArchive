@@ -16,11 +16,13 @@ public class Startup
     {
         _appConfig = new PathConfig();
         configuration.Bind("Paths", _appConfig);
-        if (configuration["Paths"] is null)
+        
+        // load paths from cnfig.json if not set in configuration, mostly used for development overrides
+        const string configFile = "config.json";
+        if (configuration["Paths"] is null && File.Exists(configFile))
         {
-            var configFile = "config.json";
-            if (!File.Exists(configFile)) throw new Exception();
-            _appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile)) ?? throw new Exception();
+            _appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile)) ??
+                         throw new Exception("Deserialization of config.json failed");
         }
 
         ConfigRoot = configuration;
