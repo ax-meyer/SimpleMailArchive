@@ -8,12 +8,16 @@ namespace SimpleMailArchiver.Services;
 
 public class MailMessageHelperService(ApplicationContext appContext, IDbContextFactory<ArchiveContext> dbContextFactory)
 {
-    public string GetEmlPath(MailMessage message)
+    public string GetEmlPath(int messageId)
     {
-        return (appContext.PathConfig.ArchiveBasePath + "/" + message.Folder + "/message-" + message.Id + ".eml")
-            .Replace("//", "/");
+        using var dbContext = dbContextFactory.CreateDbContext();
+        var message = dbContext.MailMessages.AsNoTracking().First(o => o.Id == messageId);
+        return GetEmlPath(message);
     }
-
+    
+    public string GetEmlPath(MailMessage message) =>
+        (appContext.PathConfig.ArchiveBasePath + "/" + (message.Folder + "/message-" + message.Id + ".eml").Replace("//", "/")).Replace("//", "/");
+    
     public static async Task<string> CreateMailHash(MailMessage message, CancellationToken token = default)
     {
         return await CreateMailHash(message.Date, message.Subject, message.Sender, message.Recipient,

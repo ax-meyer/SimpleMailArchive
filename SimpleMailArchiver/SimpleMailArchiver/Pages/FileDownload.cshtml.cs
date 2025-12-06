@@ -1,14 +1,22 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// csharp
+
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SimpleMailArchiver.Data;
 using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Pages;
 
-public class FileDownloadsModel(FileDownloadHelperContext helperContext) : PageModel
+public class FileDownloadsModel(MailMessageHelperService helperService) : PageModel
 {
-    public Task<IActionResult> OnGet()
+    public async Task<IActionResult> OnGet(int id)
     {
-        return Task.FromResult<IActionResult>(File(helperContext.FileContent, "application/force-download",
-            helperContext.FileName));
+        var path = helperService.GetEmlPath(id);
+        if (!System.IO.File.Exists(path)) return NotFound();
+
+        var content = await System.IO.File.ReadAllBytesAsync(path);
+        return File(content, "message/rfc822", "mail.eml");
     }
 }

@@ -3,11 +3,7 @@
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
-@using SimpleMailArchiver.Services
-@inject DialogService DialogService
-@inject FileDownloadHelperContext DownloadHelperContext
-@inject IJSRuntime JsRuntime
-
+@inject IJSRuntime JSRuntime
 <RadzenStack Class="display-mail-root">
 
     <!-- HEADER -->
@@ -87,14 +83,14 @@
     </RadzenTabs>
 
 </RadzenStack>
+<script src="scripts.js"></script>
 
 @code {
     [Parameter] public required MailMessage Message { get; set; }
 
     private async Task Download()
     {
-        await DownloadHelperContext.PrepareMessageForDownload(Message, CancellationToken.None);
-        await JsRuntime.InvokeVoidAsync("open", "download", "_blank");
+        await JSRuntime.InvokeVoidAsync("downloadMessage", Message.Id);
     }
 
     private bool HasAttachments()
