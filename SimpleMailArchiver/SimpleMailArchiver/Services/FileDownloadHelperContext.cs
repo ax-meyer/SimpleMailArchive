@@ -6,7 +6,7 @@ public class FileDownloadHelperContext(MailMessageHelperService messageHelperSer
 {
     public byte[] FileContent { get; private set; } = [0];
     public string FileName { get; private set; } = "empty";
-    
+
     public async Task PrepareMessageForDownload(MailMessage message, CancellationToken token)
     {
         FileContent = await File.ReadAllBytesAsync(messageHelperService.GetEmlPath(message), token);

@@ -1,10 +1,9 @@
-﻿@using SimpleMailArchiver.Data
-@using Radzen
-@using Radzen.Blazor
-
-@inject ApplicationContext AppContext;
+﻿@inject ApplicationContext AppContext;
 @inject ILogger<ImportDialog> Logger;
 
+@using Radzen
+@using Radzen.Blazor
+@using SimpleMailArchiver.Data
 @implements IDisposable
 
 <RadzenCard Style="max-width:800px;margin:40px auto;" Class="rz-card">
@@ -23,7 +22,7 @@
 
         <div class="mt-3">
             <RadzenProgressBar
-                Value="@((Progress.TotalMessageCount == 0) ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)"
+                Value="@(Progress.TotalMessageCount == 0 ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)"
                 ShowValue="true" Style="height:20px"/>
         </div>
 
@@ -56,14 +55,17 @@
 
 @code{
     private IImportProgress Progress => AppContext.ImportManager.CurrentProgress;
-    private async Task ModalCancel() => await AppContext.ImportManager.CancelAsync();
+    private async Task ModalCancel()
+    {
+        await AppContext.ImportManager.CancelAsync();
+    }
 
     protected override void OnInitialized()
     {
         Progress.ProgressUpdated += ImportManager_OnProgressUpdated;
         base.OnInitialized();
     }
-    
+
     public void Dispose()
     {
         Progress.ProgressUpdated -= ImportManager_OnProgressUpdated;

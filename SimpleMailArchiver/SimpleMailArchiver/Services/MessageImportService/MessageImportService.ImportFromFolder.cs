@@ -14,7 +14,7 @@ public partial class MessageImportService
 
         if (emlPaths.Length == 0)
         {
-            progress.Report(new ProgressData(InfoMessage: $"No .eml files found for import in {importFolderRoot}"));
+            progress.Report(new ProgressData($"No .eml files found for import in {importFolderRoot}"));
             return;
         }
 

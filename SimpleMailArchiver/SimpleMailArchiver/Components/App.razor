@@ -13,12 +13,12 @@
     <ImportMap/>
     <link rel="icon" type="image/png" href="favicon.png"/>
     <HeadOutlet @rendermode="InteractiveServer"/>
-    <RadzenTheme Theme="material" />
+    <RadzenTheme Theme="material"/>
 </head>
 
 <body>
 <Routes @rendermode="InteractiveServer"/>
-<ReconnectModal />
+<ReconnectModal/>
 <script src="@Assets["_framework/blazor.web.js"]"></script>
 <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Colors).Assembly.GetName().Version)"></script>
 </body>

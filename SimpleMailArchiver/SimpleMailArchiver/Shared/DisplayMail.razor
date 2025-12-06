@@ -32,19 +32,19 @@
 
         <ChildContent>
             <div class="message-meta">
-                <DisplayMailMetaRow Label="From:" Value="@Message.Sender" />
-                <DisplayMailMetaRow Label="To:" Value="@Message.Recipient" />
-                <DisplayMailMetaRow Label="Date:" Value="@Message.Date" />
-                <DisplayMailMetaRow Label="Subject:" Value="@Message.Subject" />
+                <DisplayMailMetaRow Label="From:" Value="@Message.Sender"/>
+                <DisplayMailMetaRow Label="To:" Value="@Message.Recipient"/>
+                <DisplayMailMetaRow Label="Date:" Value="@Message.Date"/>
+                <DisplayMailMetaRow Label="Subject:" Value="@Message.Subject"/>
 
                 @if (!string.IsNullOrWhiteSpace(Message.CcRecipient))
                 {
-                    <DisplayMailMetaRow Label="CC:" Value="@Message.CcRecipient" />
+                    <DisplayMailMetaRow Label="CC:" Value="@Message.CcRecipient"/>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(Message.BccRecipient))
                 {
-                    <DisplayMailMetaRow Label="BCC:" Value="@Message.BccRecipient" />
+                    <DisplayMailMetaRow Label="BCC:" Value="@Message.BccRecipient"/>
                 }
 
                 @if (HasAttachments())
@@ -90,7 +90,7 @@
 
 @code {
     [Parameter] public required MailMessage Message { get; set; }
-    
+
     private async Task Download()
     {
         await DownloadHelperContext.PrepareMessageForDownload(Message, CancellationToken.None);
@@ -98,11 +98,13 @@
     }
 
     private bool HasAttachments()
-        => Message.HasAttachments;
+    {
+        return Message.HasAttachments;
+    }
 
     private IEnumerable<string> GetAttachments()
     {
-        string attachments = Message.Attachments is null ? string.Empty : Message.Attachments;
+        var attachments = Message.Attachments is null ? string.Empty : Message.Attachments;
         if (string.IsNullOrWhiteSpace(attachments) || attachments.Trim() == "[]")
             return Array.Empty<string>();
 

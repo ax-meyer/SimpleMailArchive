@@ -5,7 +5,7 @@ namespace SimpleMailArchiver.Data;
 public static class ExtensionMethods
 {
     public static IQueryable<TEntity> OrderBy<TEntity>(this IQueryable<TEntity> source, string orderByProperty,
-                        bool asc)
+        bool asc)
     {
         var command = asc ? "OrderBy" : "OrderByDescending";
         var type = typeof(TEntity);
@@ -14,7 +14,7 @@ public static class ExtensionMethods
         var propertyAccess = Expression.MakeMemberAccess(parameter, property);
         var orderByExpression = Expression.Lambda(propertyAccess, parameter);
         var resultExpression = Expression.Call(typeof(Queryable), command, [type, property.PropertyType],
-                                        source.Expression, Expression.Quote(orderByExpression));
+            source.Expression, Expression.Quote(orderByExpression));
         return source.Provider.CreateQuery<TEntity>(resultExpression);
     }
 }

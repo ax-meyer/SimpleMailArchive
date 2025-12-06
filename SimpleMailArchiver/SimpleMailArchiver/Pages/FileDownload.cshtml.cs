@@ -8,6 +8,7 @@ public class FileDownloadsModel(FileDownloadHelperContext helperContext) : PageM
 {
     public Task<IActionResult> OnGet()
     {
-        return Task.FromResult<IActionResult>(File(helperContext.FileContent, "application/force-download", helperContext.FileName));
+        return Task.FromResult<IActionResult>(File(helperContext.FileContent, "application/force-download",
+            helperContext.FileName));
     }
 }

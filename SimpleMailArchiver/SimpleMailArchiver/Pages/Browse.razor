@@ -1,7 +1,6 @@
 ﻿@page "/"
 @page "/browse"
-@using Microsoft.AspNetCore.Components.Web
-@using Microsoft.EntityFrameworkCore
+@using System.Diagnostics
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
@@ -81,7 +80,7 @@
 
 
         _messages = DbContext.MailMessages;
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
         var folders = _messages.Count();
         sw.Stop();
     }
@@ -92,7 +91,7 @@
         {
             { "Message", message }
         };
-        DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions() { Width = "1200px", Height = "800px" });
+        DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions { Width = "1200px", Height = "800px" });
     }
 
 }

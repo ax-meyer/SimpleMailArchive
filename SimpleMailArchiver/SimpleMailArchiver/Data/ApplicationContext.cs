@@ -5,17 +5,17 @@ namespace SimpleMailArchiver.Data;
 
 public class ApplicationContext
 {
-    public PathConfig PathConfig { get; }
-    public ImportManager ImportManager { get; }
-    public List<Account> Accounts { get; private set; }
-
     public ApplicationContext(PathConfig config, ILoggerFactory loggerFactory)
     {
         PathConfig = config;
         LoadAccounts();
         ImportManager = new ImportManager(loggerFactory);
     }
-    
+
+    public PathConfig PathConfig { get; }
+    public ImportManager ImportManager { get; }
+    public List<Account> Accounts { get; private set; }
+
     [MemberNotNull(nameof(Accounts))]
     private void LoadAccounts()
     {
@@ -24,7 +24,6 @@ public class ApplicationContext
         var files = Directory.GetFiles(PathConfig.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
         Accounts.Capacity = files.Length;
         foreach (var file in files)
-        {
             try
             {
                 var acc = JsonSerializer.Deserialize<Account>(File.ReadAllText(file));
@@ -42,6 +41,5 @@ public class ApplicationContext
             {
                 throw new InvalidDataException($"Parsing {file} failed with error {ex.Message}", ex);
             }
-        }
     }
 }

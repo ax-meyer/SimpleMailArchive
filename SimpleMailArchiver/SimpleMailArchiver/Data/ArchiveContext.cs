@@ -16,12 +16,11 @@ public partial class ArchiveContext : DbContext
     }
 
     public virtual DbSet<MailMessage> MailMessages { get; set; }
-        
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
         {
-
         }
     }
 

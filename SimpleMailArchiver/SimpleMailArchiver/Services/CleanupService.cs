@@ -13,7 +13,7 @@ public class CleanupService(
     private readonly ILogger<CleanupService> _logger = loggerFactory.CreateLogger<CleanupService>();
 
     /// <summary>
-    /// WARNING: NOT TESTED YET
+    ///     WARNING: NOT TESTED YET
     /// </summary>
     /// <returns></returns>
     private async Task RecalculateHashes(CancellationToken token = default)
@@ -29,7 +29,7 @@ public class CleanupService(
     }
 
     /// <summary>
-    /// WARNING: NOT TESTED YET
+    ///     WARNING: NOT TESTED YET
     /// </summary>
     /// <returns></returns>
     private async Task RemoveDuplicates(CancellationToken token = default)

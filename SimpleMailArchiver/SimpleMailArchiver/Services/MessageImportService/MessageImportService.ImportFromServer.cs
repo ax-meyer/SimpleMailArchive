@@ -17,7 +17,7 @@ public partial class MessageImportService
         var account = appContext.Accounts.First(item => item.AccountFilename == accountFilename);
 
         using var client = new ImapClient();
-        await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, cancellationToken: ct);
+        await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, ct);
         await client.AuthenticateAsync(account.Username, account.Password, ct);
 
         await using var context = await dbContextFactory.CreateDbContextAsync(ct);
@@ -44,7 +44,8 @@ public partial class MessageImportService
 
                 var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, ct);
                 var msgUids = await folder.SearchAsync(SearchQuery.All, ct);
-                var messageSummaries = await folder.FetchAsync(msgUids, MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, ct);
+                var messageSummaries = await folder.FetchAsync(msgUids,
+                    MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, ct);
                 var messageToDeleteIds = new List<UniqueId>();
                 var messagesOnServer = new List<string>();
 
@@ -59,7 +60,7 @@ public partial class MessageImportService
                     using var hmsg = new MimeMessage(messageSummary.Headers);
                     hmsg.Date = (DateTimeOffset)messageSummary.InternalDate!;
                     var headerMsg = await MailParser.Construct(hmsg, archiveFolder, ct);
-                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount+1));
+                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount + 1));
 
                     // mark message to be deleted if meets the deletion date.
                     // delete will only be executed if whole folder is processed successfully.
@@ -93,12 +94,11 @@ public partial class MessageImportService
                     msg.Date = (DateTimeOffset)messageSummary.InternalDate;
 
                     var saved = await messageHelperService.SaveMessage(msg, folder.FullName, ct);
-                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount+1));
+                    progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount + 1));
 
 
                     if (saved)
-                        progress.Report(new ProgressData(ImportedMessageCount: progress.ImportedMessageCount+1));
-
+                        progress.Report(new ProgressData(ImportedMessageCount: progress.ImportedMessageCount + 1));
                 }
 
                 // delete messages marked for deletion.
@@ -110,8 +110,8 @@ public partial class MessageImportService
                         //await folder.AddFlagsAsync(messageToDeleteIds, MessageFlags.Deleted, true, ct);
                         //await folder.ExpungeAsync(ct);
 #endif
-                    progress.Report(new ProgressData(RemoteMessagesDeletedCount: progress.RemoteMessagesDeletedCount + messageToDeleteIds.Count));
-
+                    progress.Report(new ProgressData(
+                        RemoteMessagesDeletedCount: progress.RemoteMessagesDeletedCount + messageToDeleteIds.Count));
                 }
 
                 if (folderOptions is { SyncServerFolder: true })
@@ -123,7 +123,6 @@ public partial class MessageImportService
                     {
                         var deletedMessages = new List<MailMessage>();
                         foreach (var msg in msgsToDelete)
-                        {
                             try
                             {
                                 var emlPath = messageHelperService.GetEmlPath(msg);
@@ -134,12 +133,11 @@ public partial class MessageImportService
                             {
                                 _logger.LogError(ex, "Failed to delete message {MsgId}", msg.Id);
                             }
-                        }
 
                         context.MailMessages.RemoveRange(deletedMessages);
                         await context.SaveChangesAsync(CancellationToken.None);
-                        progress.Report(new ProgressData(LocalMessagesDeletedCount: progress.LocalMessagesDeletedCount + deletedMessages.Count));
-
+                        progress.Report(new ProgressData(
+                            LocalMessagesDeletedCount: progress.LocalMessagesDeletedCount + deletedMessages.Count));
                     }
                 }
             }

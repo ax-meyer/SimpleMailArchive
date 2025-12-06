@@ -19,8 +19,9 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
         return await CreateMailHash(message.Date, message.Subject, message.Sender, message.Recipient,
             message.CcRecipient, message.BccRecipient, token);
     }
-    
-    public static async Task<string> CreateMailHash(DateTime date, string subject, string sender, string recipient, string? ccRecipient, string? bccRecipient, CancellationToken token = default)
+
+    public static async Task<string> CreateMailHash(DateTime date, string subject, string sender, string recipient,
+        string? ccRecipient, string? bccRecipient, CancellationToken token = default)
     {
         var strData = date.ToString("dd.MM.yyyy-HH:mm:ss");
         strData += subject;
@@ -34,10 +35,7 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
         var hex = "";
 
         var hashValue = await alg.ComputeHashAsync(new MemoryStream(encodedMessage), token);
-        foreach (var x in hashValue)
-        {
-            hex += $"{x:x2}";
-        }
+        foreach (var x in hashValue) hex += $"{x:x2}";
 
         return hex;
     }
@@ -55,7 +53,8 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
 
         var emlPath = GetEmlPath(mailMessage);
         var parentFolder = Path.GetDirectoryName(emlPath);
-        if (parentFolder is null) throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
+        if (parentFolder is null)
+            throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
 
         Directory.CreateDirectory(parentFolder);
         await mimeMessage.WriteToAsync(emlPath, CancellationToken.None);

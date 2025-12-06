@@ -16,7 +16,7 @@ public record MailMessage
     public string? BccRecipient { get; init; }
     [Required] public required DateTime Date { get; init; }
     public string? Attachments { get; init; }
-    [Required] public required string Folder { get; set; } 
+    [Required] public required string Folder { get; set; }
     public string TextBody { get; init; } = string.Empty;
     public string HtmlBody { get; init; } = string.Empty;
 
@@ -41,7 +41,6 @@ public static class MailParser
             attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
 
         foreach (var part in mimeMessage.BodyParts)
-        {
             if (part.ContentDisposition is { FileName: not null })
             {
                 var name = part.ContentDisposition.FileName;
@@ -54,7 +53,6 @@ public static class MailParser
                 if (!attachmentNames.Contains(name))
                     attachmentNames.Add(part.ContentType.Name);
             }
-        }
 
         var subject = mimeMessage.Subject;
         var sender = mimeMessage.From.ToString();

@@ -10,7 +10,6 @@ namespace SimpleMailArchiver;
 
 public class Startup
 {
-    private IConfiguration ConfigRoot { get; }
     private readonly PathConfig _appConfig;
 
     public Startup(IConfiguration configuration)
@@ -26,6 +25,8 @@ public class Startup
 
         ConfigRoot = configuration;
     }
+
+    private IConfiguration ConfigRoot { get; }
 
     public void ConfigureServices(IServiceCollection services)
     {
