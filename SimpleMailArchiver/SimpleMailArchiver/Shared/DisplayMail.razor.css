@@ -1,0 +1,64 @@
+/* File: DisplayMail.razor.css */
+
+.display-mail-root {
+    display: flex;
+    flex-direction: column;
+    height: 88vh;
+    padding: 20px;
+    box-sizing: border-box;
+    gap: 12px;
+}
+
+.display-mail-header {
+    align-items: center;
+    justify-content: space-between;
+}
+
+.subject-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-buttons {
+    flex: 0 0 auto;
+    gap: 10px;
+}
+
+.message-panel {
+    max-height: 200px;
+    overflow: hidden;
+}
+
+.message-meta {
+    padding: 8px 4px;
+}
+
+.meta-row {
+    padding: 4px 0;
+}
+
+.attachment-file {
+    padding: 2px 0;
+    font-size: 0.95em;
+    color: var(--rz-primary-text, #333);
+}
+
+/* Tabs layout */
+.display-mail-tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 8px;
+}
+
+/* Inner tab content scrolls */
+.tab-content {
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+    box-sizing: border-box;
+    background: var(--rz-panel-background, transparent);
+}

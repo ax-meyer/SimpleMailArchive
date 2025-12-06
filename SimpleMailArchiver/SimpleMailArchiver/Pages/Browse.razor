@@ -1,167 +1,97 @@
 ﻿@page "/"
 @page "/browse"
-
-<PageTitle>Mail Archive</PageTitle>
-
+@using System.Diagnostics
+@using Radzen
+@using Radzen.Blazor
 @using SimpleMailArchiver.Data
-@using Microsoft.EntityFrameworkCore;
-@using System.Text.Json;
+@using SimpleMailArchiver.Shared
 
-@implements IAsyncDisposable
+@inject ArchiveContext DbContext;
+@inject DialogService DialogService;
 
-<h1>Mail Archive</h1>
-
-<p>
-    Folder:
-    <select @bind="selectedFolder">
-        @foreach (var folder in filterFolders)
-        {
-            <option value="@folder">@folder</option>
-        }
-    </select>
-</p>
-
-<p>
-    Search:
-    <input @bind="filterString" placeholder="Type to search..." />
-</p>
-
-<p>Number of messages: @numMessages</p>
+<h3>Mail Archive</h3>
 
 
-<table class="table">
-    <thead>
-        <tr>
-            @foreach (TableHeader header in Enum.GetValues(typeof(TableHeader)))
-            {
-                <th class="browse-table-header @header.ToString().ToLower()" @onclick="@(e => sortTable(header))">
-                    @if (header == TableHeader.Attachments)
+<RadzenDataGrid
+    @ref="@_messagesGrid"
+    AllowPaging="@true"
+    AllowSorting="@true"
+    AllowFiltering="@true"
+    FilterMode="FilterMode.SimpleWithMenu"
+    AllowVirtualization="@false"
+    FilterPopupRenderMode="PopupRenderMode.OnDemand"
+    LogicalFilterOperator="LogicalFilterOperator.And"
+    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+    AllowColumnResize="@true"
+    AllowAlternatingRows="@true"
+    PageSizeOptions="@(new[] { 10, 25, 50, 100, 250, 500, 1000 })"
+    Cou
+    Data="@_messages">
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending">
+            <GroupFooterTemplate>
+                Showing <b>@_messages!.AsQueryable().Where(_messagesGrid!.ColumnsCollection).Count()</b> of
+                <b>@_messages!.Count()</b> messages
+            </GroupFooterTemplate>
+
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Subject)" Title="Subject"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Sender)" Title="Sender"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder"
+                              FilterMode="FilterMode.CheckBoxList"/>
+        <RadzenDataGridColumn Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
+            <HeaderTemplate>
+                <RadzenIcon Icon="attach_file"/>
+            </HeaderTemplate>
+            <Template>
+                @{
+                    var numberOfAttachments = context.NumberOfAttachments;
+                    if (numberOfAttachments is null or 0)
                     {
-                        <p class="in-table">&#x1F4CE</p>
+                        <RadzenIcon Icon="close"/>
                     }
                     else
                     {
-                        <p class="in-table">@header.ToString()</p>
+                        <RadzenIcon Icon="check"/>
+                        <p class="in-table">(@numberOfAttachments)</p>
                     }
-                </th>
-            }
-        </tr>
-    </thead>
-    <tbody>
-        <Virtualize @ref="virtualizeComponent" ItemsProvider="@GetMessagesAsync" TItem="MailMessage" Context="message" ItemSize="50" OverscanCount="100">
-            <ItemContent>
-                <MailTableEntry Message="@message" @onclick="() => DisplayMessage(message)" />
-            </ItemContent>
-            <Placeholder><p>Loading Message...</p></Placeholder>
-        </Virtualize>
-    </tbody>
-</table>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Sortable="@false" Filterable="@false">
+            <HeaderTemplate>
+            </HeaderTemplate>
+            <Template>
+                <RadzenButton Click="@(() => DisplayMessage(context))">Open</RadzenButton>
+            </Template>
+        </RadzenDataGridColumn>
 
-
-@if (showMessage)
-{
-    <DisplayMail Message="@selectedMessage" OnClose="@DisplayMailClosing" />
-}
+    </Columns>
+</RadzenDataGrid>
 
 @code {
-    private int numMessages = 0;
-    private ICollection<MailMessage> messages { get; set; }
-    private bool showMessage = false;
-    private TableHeader headerToSortBy = TableHeader.Date;
-    private List<string> filterFolders = new() { "All" };
-    private string _selectedFolder = "All";
-    private bool sortAscending = false;
-    private string _filterString = "";
-
-
-#nullable enable
-    private MailMessage? selectedMessage;
-    private event EventHandler? searchEvent;
-    private Virtualize<MailMessage>? virtualizeComponent;
-#nullable disable
-
-    private string selectedFolder
-    {
-        get => _selectedFolder;
-        set
-        {
-            _selectedFolder = value;
-            searchEvent?.Invoke(null, EventArgs.Empty);
-        }
-    }
-
-    private string filterString
-    {
-        get => _filterString;
-        set
-        {
-            _filterString = value;
-            searchEvent?.Invoke(null, EventArgs.Empty);
-        }
-    }
-
-    private ArchiveContext context;
+    private IQueryable<MailMessage>? _messages;
+    private RadzenDataGrid<MailMessage>? _messagesGrid;
 
     protected override async Task OnInitializedAsync()
     {
-        await base.OnInitializedAsync().ConfigureAwait(false);
+        await base.OnInitializedAsync();
 
-        context = await Program.ContextFactory.CreateDbContextAsync().ConfigureAwait(false);
-        filterFolders.AddRange(await context.MailMessages.Select(m => m.Folder).Distinct().OrderBy(f => f).ToListAsync().ConfigureAwait(false));
-        searchEvent += async (sender, e) => await MessageUpdate().ConfigureAwait(false);
-    }
 
-    private async Task sortTable(TableHeader header)
-    {
-        if (headerToSortBy == header)
-            sortAscending = !sortAscending;
-        else
-            headerToSortBy = header;
-        await MessageUpdate().ConfigureAwait(false);
-    }
-
-    private async Task MessageUpdate()
-    {
-        if (virtualizeComponent != null)
-            await virtualizeComponent.RefreshDataAsync().ConfigureAwait(false);
-        StateHasChanged();
-    }
-
-    private async ValueTask<ItemsProviderResult<MailMessage>> GetMessagesAsync(ItemsProviderRequest request)
-    {
-        var msgs = context.MailMessages.AsQueryable();
-        if (selectedFolder != "All")
-            msgs = msgs.Where(m => m.Folder == selectedFolder);
-        if (filterString.Trim() != string.Empty)
-            msgs = msgs.Where(m =>
-            m.Subject.Contains(filterString) ||
-            m.Sender.Contains(filterString) ||
-            m.Recipient.Contains(filterString) ||
-            m.CC_recipient.Contains(filterString) ||
-            m.BCC_recipient.Contains(filterString) ||
-            m.Date.ToString().Contains(filterString) ||
-            m.Attachments.Contains(filterString) ||
-            m.Folder.Contains(filterString) ||
-            m.TextBody.Contains(filterString));
-
-        numMessages = await msgs.CountAsync().ConfigureAwait(false);
-        StateHasChanged();
-        var ms = msgs.OrderBy(headerToSortBy.ToString(), sortAscending).Skip(request.StartIndex).Take(request.Count);
-        return new ItemsProviderResult<MailMessage>((IEnumerable<MailMessage>)ms, numMessages);
+        _messages = DbContext.MailMessages;
+        var sw = Stopwatch.StartNew();
+        var folders = _messages.Count();
+        sw.Stop();
     }
 
     private void DisplayMessage(MailMessage message)
     {
-        if (message == null) throw new ArgumentNullException(nameof(message));
-        selectedMessage = message;
-        showMessage = true;
+        var dict = new Dictionary<string, object>
+        {
+            { "Message", message }
+        };
+        DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions { Width = "1200px", Height = "800px" });
     }
 
-    private void DisplayMailClosing() => showMessage = false;
-
-    public async ValueTask DisposeAsync()
-    {
-        if (context is not null)
-            await context.DisposeAsync().ConfigureAwait(false);
-    }
 }

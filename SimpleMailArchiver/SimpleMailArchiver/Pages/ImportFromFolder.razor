@@ -1,115 +1,50 @@
 ﻿@page "/import-folder"
+@using Radzen
+@using Radzen.Blazor
+@using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Services.MessageImportService
+@using SimpleMailArchiver.Shared
+@inject MessageImportService MessageImportService;
+@inject ApplicationContext AppContext;
 
-<PageTitle>Import mail from local folder</PageTitle>
+<RadzenCard Style="max-width:900px;margin:20px auto;">
+    <ChildContent>
+        <h3>Import mail from folder on server</h3>
 
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using MimeKit;
-@using System.Diagnostics;
+        <p class="text-muted">This will import emails from a folder with .eml files mounted to the
+            <strong>@AppContext.PathConfig.ImportBasePath</strong> in the docker container.</p>
 
-<h1>Import mail from folder on server</h1>
+        <RadzenTemplateForm TItem="string" Data="_rootImportPath">
+            <div class="mb-3">
+                <label class="form-label">Root folder name for the import in archive</label>
+                <RadzenTextBox @bind-Value="_rootImportPath" Style="width:300px" AriaLabel="Root import path"/>
+                <div class="form-text">E.g.: If you enter "inbox/", all emails from the import folder will be put in the
+                    inbox folder of the archive. Subfolders will be created under the inbox folder.
+                </div>
+            </div>
 
-<p>This will import emails from a folder with .eml files mounted to the @Program.Config.ImportBasePath in the docker container.</p>
+            <div class="mb-3">
+                <RadzenButton Icon="upload" ButtonStyle="ButtonStyle.Primary" Click="@(() => Task.Run(ImportFolder))"
+                              Disabled="@AppContext.ImportManager.IsRunning">Import from folder
+                </RadzenButton>
+            </div>
+        </RadzenTemplateForm>
 
-<p>Root folder name for the import in archive: <input id="rootimportpath" @bind-value="rootimportpath"></p>
-<p>The path the root folder in the archive the import folder will be mapped to.</p>
-<p>E.g.: If you enter "inbox/", all emails from the import folder will be put in the inbox folder of the archive. Subfolders in the import folder containing emails will be created under the inbox folder in the archive.</p>
-
-<p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFolder)" disabled="@Program.ImportRunning">Import from folder</button>
-    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
-</p>
-
-<p role="status">@Program.ImportProgress.InfoMessage</p>
-<table class="table-responsive">
-    <tr>
-        <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
-    </tr>
-    <tr>
-        <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
-    </tr>
-    <tr>
-        <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
-    </tr>
-</table>
-
-@if (Program.ImportRunning)
-{
-    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
-}
+        @if (AppContext.ImportManager.IsRunning)
+        {
+            <ImportDialog/>
+        }
+    </ChildContent>
+</RadzenCard>
 
 
 @code {
-    private CancellationTokenSource ctSource;
 
-    private void Cancel() => ctSource?.Cancel();
-    private string rootimportpath = "inbox/";
+    private string _rootImportPath = "inbox/";
 
-    private async Task ImportFolder()
+    private void ImportFolder()
     {
-        if (Program.ImportRunning)
-            return;
-
-        ctSource = new CancellationTokenSource();
-        Program.ImportProgress = new();
-        Program.ImportProgress.Ct = ctSource.Token;
-        var emlPaths = System.IO.Directory.GetFiles(Program.Config.ImportBasePath, "*.eml", SearchOption.AllDirectories);
-
-        if (emlPaths.Length == 0)
-        {
-            Program.ImportProgress.InfoMessage = $"No .eml files found for import in {Program.Config.ImportBasePath}";
-            return;
-        }
-
-        Program.ImportProgress.TotalMessageCount = emlPaths.Length;
-
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-
-        var watch = new Stopwatch();
-        string fmt = @"hh\:mm\:ss";
-
-        try
-        {
-            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
-            watch.Start();
-
-            var mailTask = ImportMessages.ImportFromFolder(emlPaths, Program.Config.ImportBasePath, Program.ImportProgress);
-
-            while (!mailTask.IsCompleted)
-            {
-                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
-                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-                Thread.Sleep(1000);
-            }
-
-            await mailTask.ConfigureAwait(false);
-
-            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
-        }
-        catch (OperationCanceledException)
-        {
-            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
-        }
-        catch (InvalidDataException)
-        {
-            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
-        }
-        catch (ArgumentException ex)
-        {
-            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
-        }
-        finally
-        {
-            Program.ImportRunning = false;
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-        }
+        AppContext.ImportManager.Start((progress, ct) => MessageImportService.ImportFromFolder(AppContext.PathConfig.ImportBasePath, _rootImportPath, progress, ct));
     }
-}
 
+}

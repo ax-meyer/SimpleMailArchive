@@ -1,111 +1,109 @@
 ﻿@page "/import-api"
-
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using Microsoft.AspNetCore.WebUtilities;
+@using Microsoft.AspNetCore.WebUtilities
+@using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Services.MessageImportService
+@inject ILoggerFactory LoggerFactory;
 @inject NavigationManager NavManager
+@inject MessageImportService MessageImportService;
+@inject ApplicationContext AppContext;
 
 
 @code {
-    protected async override void OnInitialized()
+    private ILogger<ImportApi> _logger = null!;
+
+    protected override void OnInitialized()
     {
-        if (Program.ImportRunning)
-            return;
-        Program.ImportRunning = true;
-        Program.Logger.LogInformation("Starting api import");
+        _logger = LoggerFactory.CreateLogger<ImportApi>();
+        AppContext.ImportManager.Start(async (progress, ct) => await ExecuteImport(progress, ct));
+    }
 
+    private async Task ExecuteImport(ImportProgress progress, CancellationToken ct)
+    {
         var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
-        Program.Logger.LogInformation($"called URI \"{uri}\"");
+        _logger.LogInformation("called URI {Uri}", uri);
 
-        using var client = new System.Net.Http.HttpClient();
-        client.Timeout = System.TimeSpan.FromSeconds(10);
-        string callBackUrl = "";
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(10);
+        var callBackUrl = "";
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("callBackUrl", out var callback))
         {
             callBackUrl = callback.ToString().Trim().TrimEnd('/');
 
-            Program.Logger.LogInformation($"callback url: \"{callBackUrl}\"");
+            _logger.LogInformation("callback url: {CallBackUrl}", callBackUrl);
 
             try
             {
-                await HttpGetRetry(client, callBackUrl + "/start", 10, CancellationToken.None).ConfigureAwait(false);
+                await HttpGetRetry(client, callBackUrl + "/start", 10, CancellationToken.None);
             }
             catch (Exception ex)
             {
-                Program.Logger.LogError($"Calling {callBackUrl} failed with error {ex.Message}");
-                Program.ImportRunning = false;
+                _logger.LogError("Calling {CallBackUrl} failed with error {ExMessage}", callBackUrl, ex.Message);
                 return;
             }
         }
         else
-            Program.Logger.LogInformation("No callback url found");
+        {
+            _logger.LogInformation("No callback url found");
+        }
 
 
         if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("accountFilename", out var filename))
         {
-            string accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
-            Program.Logger.LogInformation($"API import for account file: \"{accountFilename}\"");
+            var accountFilename = filename.ToString().Trim().TrimEnd('/').TrimStart('/');
+            _logger.LogInformation("API import for account file: {AccountFilename}", accountFilename);
 
-            if (Program.Config.Accounts.Any(acc => acc.AccountFilename == accountFilename))
+            if (AppContext.Accounts.Any(acc => acc.AccountFilename == accountFilename))
             {
                 try
                 {
-                    var progress = new ImportProgress();
-                    await ImportMessages.ImportFromServer(accountFilename, progress).ConfigureAwait(false);
+                    await MessageImportService.ImportFromServer(accountFilename, progress, ct);
 
                     var msg = $"Import successful. Account {accountFilename}" +
-                        $"\nParsed: {progress.ParsedMessageCount}" +
-                        $"\nImported : {progress.ImportedMessageCount}" +
-                        $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
-                        $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
+                              $"\nParsed: {progress.ParsedMessageCount}" +
+                              $"\nImported : {progress.ImportedMessageCount}" +
+                              $"\nDeleted server: {progress.RemoteMessagesDeletedCount}" +
+                              $"\nDeleted local: {progress.LocalMessagesDeletedCount}";
 
                     if (callBackUrl != string.Empty)
-                        await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None).ConfigureAwait(false);
-                    Program.Logger.LogInformation(msg);
+                        await HttpPostRetry(client, callBackUrl, msg, 10, CancellationToken.None);
+                    _logger.LogInformation(msg);
                 }
                 catch (Exception ex)
                 {
                     var errmsg = $"API import failed with error \"{ex.Message}\"";
-                    Program.Logger.LogError(errmsg);
+                    _logger.LogError(errmsg);
 
                     if (callBackUrl != string.Empty)
-                        await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
-                }
-                finally
-                {
-                    Program.ImportRunning = false;
+                        await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
                 }
             }
             else
             {
                 var errmsg = $"No account found for \"{accountFilename}\". Check log at startup to see account loading errors";
-                Program.Logger.LogError(errmsg);
+                _logger.LogError(errmsg);
                 if (callBackUrl != string.Empty)
-                    await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
+                    await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
             }
         }
         else
         {
-            var errmsg = "No account filename provided, api import failed";
-            Program.Logger.LogError(errmsg);
+            const string errmsg = "No account filename provided, api import failed";
+            _logger.LogError(errmsg);
 
             if (callBackUrl != string.Empty)
-                await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None).ConfigureAwait(false);
+                await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);
         }
-
-        Program.ImportRunning = false;
-
     }
 
     private async Task HttpGetRetry(HttpClient client, string url, int retries, CancellationToken token = default)
     {
-        int counter = 0;
-        bool retry = true;
-        while(retry)
+        var counter = 0;
+        var retry = true;
+        while (retry)
         {
             try
             {
-                await client.GetAsync(url, token).ConfigureAwait(false);
+                await client.GetAsync(url, token);
                 retry = false;
             }
             catch
@@ -118,13 +116,13 @@
 
     private async Task HttpPostRetry(HttpClient client, string url, string message, int retries, CancellationToken token = default)
     {
-        int counter = 0;
-        bool retry = true;
+        var counter = 0;
+        var retry = true;
         while (retry)
         {
             try
             {
-                await client.PostAsync(url, new StringContent(message), token).ConfigureAwait(false);
+                await client.PostAsync(url, new StringContent(message), token);
                 retry = false;
             }
             catch
@@ -135,4 +133,4 @@
         }
     }
 
-    }
+}

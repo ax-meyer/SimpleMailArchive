@@ -1,1 +1,21 @@
-{"FolderOptions":[{"Name":"FolderName","Exclude":false,"DeleteAfterDays":null,"SyncServerFolder":false},{"Name":"FolderName","Exclude":false,"DeleteAfterDays":null,"SyncServerFolder":false}],"AccountDisplayName":"AccountNameToDisplay","Username":"Username","Password":"SecretPassword","ImapUrl":"ImapServerURL","DeleteAfterDays":-1}
+{
+  "FolderOptions": [
+    {
+      "Name": "FolderName",
+      "Exclude": false,
+      "DeleteAfterDays": null,
+      "SyncServerFolder": false
+    },
+    {
+      "Name": "FolderName",
+      "Exclude": false,
+      "DeleteAfterDays": null,
+      "SyncServerFolder": false
+    }
+  ],
+  "AccountDisplayName": "AccountNameToDisplay",
+  "Username": "Username",
+  "Password": "SecretPassword",
+  "ImapUrl": "ImapServerURL",
+  "DeleteAfterDays": -1
+}

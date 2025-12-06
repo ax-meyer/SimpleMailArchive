@@ -1,121 +1,50 @@
 ﻿@page "/import-server"
+@using Radzen
+@using Radzen.Blazor
+@using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Services.MessageImportService
+@using SimpleMailArchiver.Shared
 
-<PageTitle>Import mail from online account</PageTitle>
+@inject MessageImportService MessageImportService;
+@inject ApplicationContext AppContext;
 
-@using SimpleMailArchiver.Data;
-@using SimpleMailArchiver.Shared;
-@using MailKit;
-@using MailKit.Search;
-@using MailKit.Security;
-@using MailKit.Net.Imap;
-@using MimeKit;
-@using System.Diagnostics;
+<RadzenCard Style="max-width:900px;margin:20px auto;">
+    <ChildContent>
+        <h3>Import from mailserver</h3>
 
-<h1>Import from mailserver</h1>
+        <div class="mb-3">
+            <label class="form-label">Select account</label>
+            <RadzenDropDown @bind-Value="_selectedAccountFilename" Data="AppContext.Accounts"
+                            TextProperty="AccountDisplayName" ValueProperty="AccountFilename" Style="width:300px"/>
+        </div>
 
-<p>
-    Select account:
-    <select @bind="selectedAccountFilename">
-        @foreach (var acc in Program.Config.Accounts)
+        <div class="mb-3">
+            <RadzenButton Icon="download" ButtonStyle="ButtonStyle.Primary" Click="@(() => Task.Run(ImportFromAccount))"
+                          Disabled="@AppContext.ImportManager.IsRunning">Import from selected account
+            </RadzenButton>
+        </div>
+
+        @if (AppContext.ImportManager.IsRunning)
         {
-            <option value="@acc.AccountFilename">@acc.AccountDisplayName</option>
+            <ImportDialog/>
         }
-    </select>
-</p>
-
-<p>
-    <button class="btn btn-primary" @onclick="() => Task.Run(ImportFromAccount)" disabled="@Program.ImportRunning">Import from selected account</button>
-    <button class="btn btn-primary" @onclick="Cancel">Cancel</button>
-</p>
-
-<p role="status">@Program.ImportProgress.InfoMessage</p>
-<table class="table-responsive">
-    <tr>
-        <td>Current Folder</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.CurrentFolder</td>
-    </tr>
-    <tr>
-        <td>Processed messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ParsedMessageCount</td>
-    </tr>
-    <tr>
-        <td>Imported messages</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.ImportedMessageCount</td>
-    </tr>
-    <tr>
-        <td>Messages deleted on server</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.RemoteMessagesDeletedCount</td>
-    </tr>
-    <tr>
-        <td>Messages deleted locally</td>
-        <td style="padding-left: 10px !important">@Program.ImportProgress?.LocalMessagesDeletedCount</td>
-    </tr>
-</table>
-
-@if (Program.ImportRunning)
-{
-    <ImportDialog Progress="@Program.ImportProgress" OnCancel="@Cancel" />
-}
+    </ChildContent>
+</RadzenCard>
 
 
 @code {
-    private string selectedAccountFilename = Program.Config.Accounts.FirstOrDefault()?.AccountFilename;
-    private CancellationTokenSource ctSource;
+    private string? _selectedAccountFilename;
 
-    private void Cancel() => ctSource?.Cancel();
-
-    private async Task ImportFromAccount()
+    protected override void OnInitialized()
     {
-        if (Program.ImportRunning)
-            return;
-        Program.ImportProgress = new();
-        ctSource = new CancellationTokenSource();
-        Program.ImportProgress.Ct = ctSource.Token;
-        Program.ImportRunning = true;
-
-        await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-
-        var watch = new Stopwatch();
-        string fmt = @"hh\:mm\:ss";
-
-        try
-        {
-            Program.ImportProgress.InfoMessage = "Import starting, please wait...";
-            if (selectedAccountFilename == null)
-                throw new ArgumentException("No valid account selected.");
-
-            watch.Start();
-            var mailTask = ImportMessages.ImportFromServer(selectedAccountFilename, Program.ImportProgress);
-
-            while (!mailTask.IsCompleted)
-            {
-                Program.ImportProgress.InfoMessage = $"Import running, duration {watch.Elapsed.ToString(fmt)}, please wait...";
-                await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-                Thread.Sleep(1000);
-            }
-            await mailTask.ConfigureAwait(false);
-            Program.ImportProgress.InfoMessage = $"Import finished after {watch.Elapsed.ToString(fmt)}";
-        }
-        catch (OperationCanceledException)
-        {
-            Program.ImportProgress.InfoMessage = $"Import was cancelled after {watch.Elapsed.ToString(fmt)}.";
-        }
-        catch (InvalidDataException)
-        {
-            Program.ImportProgress.InfoMessage = "Import failed: Internal error: Hash Mismatch";
-        }
-        catch (ArgumentException ex)
-        {
-            Program.ImportProgress.InfoMessage = $"Import failed: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            Program.ImportProgress.InfoMessage = $"Import failed with unexpected Error: {ex.Message}";
-        }
-        finally
-        {
-            Program.ImportRunning = false;
-            await InvokeAsync(StateHasChanged).ConfigureAwait(false);
-        }
+        _selectedAccountFilename = AppContext.Accounts.FirstOrDefault()?.AccountFilename;
+        base.OnInitialized();
     }
+
+    private void ImportFromAccount()
+    {
+        if (_selectedAccountFilename == null) throw new ArgumentException("No valid account selected.");
+        AppContext.ImportManager.Start((progress, ct) => MessageImportService.ImportFromServer(_selectedAccountFilename, progress, ct));
+    }
+
 }
