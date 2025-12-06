@@ -3,7 +3,7 @@
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JsRuntime
 <RadzenStack Class="display-mail-root">
 
     <!-- HEADER -->
@@ -90,7 +90,7 @@
 
     private async Task Download()
     {
-        await JSRuntime.InvokeVoidAsync("downloadMessage", Message.Id);
+        await JsRuntime.InvokeVoidAsync("downloadMessage", Message.Id);
     }
 
     private bool HasAttachments()

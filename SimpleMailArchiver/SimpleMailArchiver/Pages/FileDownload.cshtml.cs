@@ -1,10 +1,5 @@
-﻿// csharp
-
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using SimpleMailArchiver.Data;
 using SimpleMailArchiver.Services;
 
 namespace SimpleMailArchiver.Pages;
