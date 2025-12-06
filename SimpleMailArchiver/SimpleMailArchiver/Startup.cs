@@ -37,7 +37,6 @@ public class Startup
         // AppConfig
         services.AddSingleton(_appConfig);
         services.AddSingleton<ApplicationContext>();
-        services.AddScoped<FileDownloadHelperContext>();
         services.AddScoped<MailMessageHelperService>();
 
         // Set up directories
