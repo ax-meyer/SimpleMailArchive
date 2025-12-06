@@ -5,9 +5,12 @@ namespace SimpleMailArchiver.Data;
 
 public class ApplicationContext
 {
-    public ApplicationContext(PathConfig config, ILoggerFactory loggerFactory)
+    private readonly ILogger<ApplicationContext> _logger;
+
+    public ApplicationContext(PathConfig config, ILogger<ApplicationContext> logger, ILoggerFactory loggerFactory)
     {
         PathConfig = config;
+        _logger = logger;
         LoadAccounts();
         ImportManager = new ImportManager(loggerFactory);
     }
@@ -19,6 +22,8 @@ public class ApplicationContext
     [MemberNotNull(nameof(Accounts))]
     private void LoadAccounts()
     {
+        using var _ = _logger.BeginScope("LoadAccounts");
+        _logger.LogInformation("Loading accounts");
         Accounts = [];
 
         var files = Directory.GetFiles(PathConfig.AccountConfigsPath, "*.account", SearchOption.TopDirectoryOnly);
@@ -31,6 +36,7 @@ public class ApplicationContext
                 {
                     acc.AccountFilename = Path.GetFileName(file);
                     Accounts.Add(acc);
+                    _logger.LogInformation("Found account: {AccountName}", acc.AccountDisplayName);
                 }
                 else
                 {

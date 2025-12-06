@@ -32,7 +32,7 @@ public partial class MessageImportService
                 ct.ThrowIfCancellationRequested();
 
                 var pathInImportFolder = group.Key ?? throw new Exception("Could not determine import folder path");
-                progress.Report(new ProgressData(CurrentFolder: pathInImportFolder));
+                progress.Report(new ProgressData(InfoMessage: "Import running", CurrentFolder: pathInImportFolder));
                 var pathInArchive = Path.Join(basePathInArchive, pathInImportFolder);
                 await Parallel.ForEachAsync(group, ct, async (file, innerToken) =>
                 {

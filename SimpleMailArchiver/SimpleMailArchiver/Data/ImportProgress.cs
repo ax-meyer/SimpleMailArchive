@@ -72,7 +72,7 @@ public partial class ImportProgress(ILoggerFactory loggerFactory) : IImportProgr
         ProgressUpdated?.Invoke(this, EventArgs.Empty);
     }
 
-    [LoggerMessage(LogLevel.Information,
+    [LoggerMessage(LogLevel.Debug,
         "{infoMessage} | {currentFolder} | Total: {totalMessageCount}, Parsed: {parsedMessageCount}, Imported: {importedMessageCount}, Local Deleted: {localMessagesDeletedCount}, Remote Deleted: {remoteMessagesDeletedCount}")]
     partial void LogUpdate(string infoMessage, string currentFolder, int totalMessageCount, int parsedMessageCount,
         int importedMessageCount, int localMessagesDeletedCount, int remoteMessagesDeletedCount);

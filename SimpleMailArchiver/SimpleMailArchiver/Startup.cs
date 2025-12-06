@@ -17,12 +17,12 @@ public class Startup
         _appConfig = new PathConfig();
         configuration.Bind("Paths", _appConfig);
         
-        // load paths from cnfig.json if not set in configuration, mostly used for development overrides
+        // load paths from config.json if not set in configuration, mostly used for development overrides
         const string configFile = "config.json";
         if (configuration["Paths"] is null && File.Exists(configFile))
         {
             _appConfig = JsonSerializer.Deserialize<PathConfig>(File.ReadAllText(configFile)) ??
-                         throw new Exception("Deserialization of config.json failed");
+                        throw new Exception("Deserialization of config.json failed");
         }
 
         ConfigRoot = configuration;
@@ -51,7 +51,6 @@ public class Startup
         services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
 
         services.AddScoped<MessageImportService>();
-
         // Logging
         services.AddLogging();
 

@@ -10,7 +10,6 @@ public class ImportManager(ILoggerFactory loggerFactory) : IAsyncDisposable
     private readonly ILogger<ImportManager> _logger = loggerFactory.CreateLogger<ImportManager>();
 
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly Stopwatch _watch = new();
     private Task? _currentImportTask;
 
     public bool IsRunning { get; private set; }
@@ -43,25 +42,30 @@ public class ImportManager(ILoggerFactory loggerFactory) : IAsyncDisposable
 
     public void Start(Func<ImportProgress, CancellationToken, Task> importAction)
     {
-        if (IsRunning) return;
+        using var _ = _logger.BeginScope("ImportManager.Start");
+        _logger.LogInformation("Starting import operation");
 
-        if (!_semaphore.Wait(TimeSpan.Zero)) return;
+        if (!_semaphore.Wait(TimeSpan.Zero))
+        {
+            _logger.LogWarning("Import operation is already running. Start request ignored");
+            return;
+        }
+        
         IsRunning = true;
         Cts = new CancellationTokenSource();
         _currentImportTask = Task.Run(async () =>
         {
             try
             {
-                _watch.Start();
                 _currentProgress.Reset();
                 _logger.LogInformation("Import operation started");
                 await importAction(_currentProgress, Cts.Token);
+                _currentProgress.Report(new ProgressData("Import operation completed"));
             }
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("Import operation was cancelled");
-                _currentProgress.Report(
-                    new ProgressData($"Import was cancelled after {_watch.Elapsed.ToString(Fmt)}"));
+                _currentProgress.Report(new ProgressData("Import operation cancelled"));
             }
             catch (InvalidDataException ex)
             {
@@ -84,7 +88,6 @@ public class ImportManager(ILoggerFactory loggerFactory) : IAsyncDisposable
                 _semaphore.Release();
                 Cts?.Dispose();
                 Cts = null;
-                _watch.Reset();
             }
         }, Cts.Token);
     }

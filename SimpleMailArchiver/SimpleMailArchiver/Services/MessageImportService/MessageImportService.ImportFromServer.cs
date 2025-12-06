@@ -40,7 +40,7 @@ public partial class MessageImportService
 
                 ct.ThrowIfCancellationRequested();
 
-                progress.Report(new ProgressData(CurrentFolder: folder.FullName));
+                progress.Report(new ProgressData(InfoMessage: "Import running", CurrentFolder: folder.FullName));
 
                 var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, ct);
                 var msgUids = await folder.SearchAsync(SearchQuery.All, ct);

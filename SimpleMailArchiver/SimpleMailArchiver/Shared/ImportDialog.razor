@@ -16,16 +16,18 @@
             </RadzenButton>
         </div>
 
-        <div class="mt-3" aria-live="polite">
-            <RadzenText Value="@Progress.InfoMessage" Style="width:100%"/>
-        </div>
-
         <div class="mt-3">
             <RadzenProgressBar
                 Value="@(Progress.TotalMessageCount == 0 ? 0 : (double)Progress.ImportedMessageCount / Progress.TotalMessageCount * 100)"
                 ShowValue="true" Style="height:20px"/>
         </div>
-
+        
+        <div class="mt-3" aria-live="polite">
+            <RadzenText Style="width:100%">
+                @Progress.InfoMessage
+            </RadzenText>
+        </div>
+        
         <div class="mt-3 table-responsive">
             <table class="table">
                 <tr>
