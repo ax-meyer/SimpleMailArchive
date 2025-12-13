@@ -71,7 +71,7 @@
                 catch (Exception ex)
                 {
                     var errmsg = $"API import failed with error \"{ex.Message}\"";
-                    _logger.LogError(errmsg);
+                    _logger.LogError(ex, errmsg);
 
                     if (callBackUrl != string.Empty)
                         await HttpPostRetry(client, callBackUrl + "/fail", errmsg, 10, CancellationToken.None);

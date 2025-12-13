@@ -8,6 +8,7 @@ public partial class MessageImportService
     public async Task ImportFromFolder(string importFolderRoot, string basePathInArchive, ImportProgress progress,
         CancellationToken ct)
     {
+        _logger.BeginScope(nameof(ImportFromFolder));
         _logger.LogInformation("Start import from folder");
 
         var emlPaths = Directory.GetFiles(importFolderRoot, "*.eml", SearchOption.AllDirectories);
