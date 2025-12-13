@@ -19,7 +19,7 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Radzen.Blazor" Version="8.3.5"/>
+        <PackageReference Include="Radzen.Blazor" Version="8.3.8"/>
     </ItemGroup>
 
     <ItemGroup>
