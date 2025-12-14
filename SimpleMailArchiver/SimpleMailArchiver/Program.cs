@@ -1,10 +1,22 @@
+using Serilog;
 using SimpleMailArchiver;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables("SMA_");
+
+// Configure Serilog
+builder.Host.UseSerilog((context, services, configuration) =>
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] {Message:lj}{NewLine}{Exception}"
+        )
+);
+
 var startup = new Startup(builder.Configuration);
 startup.ConfigureServices(builder.Services);
-startup.ConfigureLogging(builder.Logging);
 
 var app = builder.Build();
 startup.Configure(app, builder.Environment);

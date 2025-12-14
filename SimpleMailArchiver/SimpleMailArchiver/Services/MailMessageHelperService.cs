@@ -6,7 +6,7 @@ using SimpleMailArchiver.Data;
 
 namespace SimpleMailArchiver.Services;
 
-public class MailMessageHelperService(ApplicationContext appContext, IDbContextFactory<ArchiveContext> dbContextFactory)
+public class MailMessageHelperService(ApplicationContext appContext, IDbContextFactory<ArchiveContext> dbContextFactory, ILogger<MailMessageHelperService> logger)
 {
     public string GetEmlPath(int messageId)
     {
@@ -61,6 +61,7 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
             throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
 
         Directory.CreateDirectory(parentFolder);
+        logger.LogInformation("Saving message with UID {Uid} to eml path {Path}", mimeMessage.MessageId, emlPath);
         await mimeMessage.WriteToAsync(emlPath, CancellationToken.None);
         await context.SaveChangesAsync(CancellationToken.None);
         return true;

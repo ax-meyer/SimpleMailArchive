@@ -115,6 +115,11 @@ public partial class MessageImportService
                     if (existingMsg != null)
                     {
                         _logger.LogDebug("Message UID {Uid} already exists in archive with ID {MsgId}", messageSummary.UniqueId, existingMsg.Id);
+                        var existingPath = messageHelperService.GetEmlPath(existingMsg);
+                        if (!File.Exists(existingPath))
+                        {
+                            _logger.LogError("Did not find eml file for existing message {MsgId} at path {Path}", existingMsg.Id, existingPath);
+                        }
                         
                         // check if message is now in different folder on the server
                         // if yes, move in archive

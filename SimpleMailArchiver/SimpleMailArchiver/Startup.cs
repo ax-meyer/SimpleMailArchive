@@ -50,8 +50,6 @@ public class Startup
         services.AddDbContextFactory<ArchiveContext>(options => options.UseSqlite(connectionString));
 
         services.AddScoped<MessageImportService>();
-        // Logging
-        services.AddLogging();
 
         // Other
         services.AddRazorPages();
@@ -62,11 +60,6 @@ public class Startup
         services.AddRadzenQueryStringThemeService();
     }
 
-    public void ConfigureLogging(ILoggingBuilder loggingBuilder)
-    {
-        loggingBuilder.AddConfiguration(ConfigRoot.GetSection("Logging"));
-        loggingBuilder.AddConsole();
-    }
 
     public void Configure(WebApplication app, IWebHostEnvironment env)
     {
