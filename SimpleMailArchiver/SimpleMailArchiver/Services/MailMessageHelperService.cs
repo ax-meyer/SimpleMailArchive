@@ -14,9 +14,14 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
         var message = dbContext.MailMessages.AsNoTracking().First(o => o.Id == messageId);
         return GetEmlPath(message);
     }
-    
-    public string GetEmlPath(MailMessage message) =>
-        (appContext.PathConfig.ArchiveBasePath + "/" + (message.Folder + "/message-" + message.Id + ".eml").Replace("//", "/")).Replace("//", "/");
+
+    public string GetEmlPath(MailMessage message)
+    {
+        if (message.Id == 0) throw new Exception("Cannot construct path for message without Id.");
+        if (string.IsNullOrWhiteSpace(message.Folder)) throw new Exception($"Folder for message {message.Id} not specified");
+        return (appContext.PathConfig.ArchiveBasePath + "/" + (message.Folder + "/message-" + message.Id + ".eml").Replace("//", "/")).Replace("//", "/");
+        
+    }
     
     public static async Task<string> CreateMailHash(MailMessage message, CancellationToken token = default)
     {
@@ -49,6 +54,7 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
         var mailMessage = await MailParser.Construct(mimeMessage, folder, token);
         
         await using var context = await dbContextFactory.CreateDbContextAsync(token);
+        await using var transaction = await context.Database.BeginTransactionAsync(token);
         if (await context.MailMessages.FirstOrDefaultAsync(o => o.Hash == mailMessage.Hash, token) is
             { } existingMessage)
         {
@@ -72,6 +78,7 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
         Directory.CreateDirectory(parentFolder);
         logger.LogInformation("Saving message file with UID {Uid} to eml path {Path}", mimeMessage.MessageId, emlPath);
         await mimeMessage.WriteToAsync(emlPath, CancellationToken.None);
+        await transaction.CommitAsync(token);
         return true;
     }
 }
