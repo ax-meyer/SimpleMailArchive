@@ -22,14 +22,14 @@ public partial class MessageImportService
         _logger.LogDebug("Connecting to IMAP server {ImapUrl}:993", account.ImapUrl);
         await client.ConnectAsync(account.ImapUrl, 993, SecureSocketOptions.SslOnConnect, ct);
         _logger.LogDebug("Connected to IMAP server successfully");
-        
+
         await client.AuthenticateAsync(account.Username, account.Password, ct);
         _logger.LogDebug("Authenticated as {Username}", account.Username);
 
         await using var context = await dbContextFactory.CreateDbContextAsync(ct);
         var folders = await client.GetFoldersAsync(new FolderNamespace('/', ""), cancellationToken: ct);
         _logger.LogDebug("Retrieved {FolderCount} folders from server", folders.Count);
-        
+
         try
         {
             foreach (var folder in folders)
@@ -59,10 +59,10 @@ public partial class MessageImportService
                 progress.Report(new ProgressData(InfoMessage: "Import running", CurrentFolder: folder.FullName));
 
                 var folderAccess = await folder.OpenAsync(FolderAccess.ReadWrite, ct);
-                
+
                 var msgUids = await folder.SearchAsync(SearchQuery.All, ct);
                 _logger.LogDebug("Found {MessageCount} messages in folder {Folder}", msgUids.Count, folder.FullName);
-                
+
                 var messageSummaries = await folder.FetchAsync(msgUids,
                     MessageSummaryItems.InternalDate | MessageSummaryItems.Headers, ct);
                 var messageToDeleteIds = new List<UniqueId>();
@@ -79,30 +79,33 @@ public partial class MessageImportService
                     _logger.LogDebug("Using account-level delete policy: {DeleteAfterDays} days", deleteAfterDays);
                 }
 
-                _logger.LogInformation("Processing {MessageCount} messages in folder {Folder}", messageSummaries.Count, folder.FullName);
-                
+                _logger.LogInformation("Processing {MessageCount} messages in folder {Folder}", messageSummaries.Count,
+                    folder.FullName);
+
                 int processedCount = 0;
                 foreach (var messageSummary in messageSummaries)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    _logger.LogDebug("Processing message UID {Uid} with InternalDate {Date}", messageSummary.UniqueId, messageSummary.InternalDate);
+                    _logger.LogDebug("Processing message UID {Uid} with InternalDate {Date}", messageSummary.UniqueId,
+                        messageSummary.InternalDate);
 
                     using var hmsg = new MimeMessage(messageSummary.Headers);
                     hmsg.Date = (DateTimeOffset)messageSummary.InternalDate!;
                     var headerMsg = await MailParser.Construct(hmsg, archiveFolder, ct);
-                    _logger.LogDebug("Parsed message header: Subject={Subject}, From={From}, Hash={Hash}", 
+                    _logger.LogDebug("Parsed message header: Subject={Subject}, From={From}, Hash={Hash}",
                         hmsg.Subject ?? "<no subject>", hmsg.From.ToString(), headerMsg.Hash);
-                    
+
                     progress.Report(new ProgressData(ParsedMessageCount: progress.ParsedMessageCount + 1));
 
                     // mark message to be deleted if meets the deletion date.
                     // delete will only be executed if whole folder is processed successfully.
                     if (deleteAfterDays > 0 && Math.Abs((headerMsg.Date - DateTime.Now).TotalDays) > deleteAfterDays)
                     {
-                        _logger.LogDebug("Message UID {Uid} marked for deletion (age: {DaysOld} days, threshold: {DeleteAfterDays})", 
-                            messageSummary.UniqueId, 
-                            Math.Abs((headerMsg.Date - DateTime.Now).TotalDays), 
+                        _logger.LogDebug(
+                            "Message UID {Uid} marked for deletion (age: {DaysOld} days, threshold: {DeleteAfterDays})",
+                            messageSummary.UniqueId,
+                            Math.Abs((headerMsg.Date - DateTime.Now).TotalDays),
                             deleteAfterDays);
                         messageToDeleteIds.Add(messageSummary.UniqueId);
                     }
@@ -114,32 +117,37 @@ public partial class MessageImportService
                         .FirstOrDefaultAsync(msg => msg.Hash == headerMsg.Hash, ct);
                     if (existingMsg != null)
                     {
-                        _logger.LogDebug("Message UID {Uid} already exists in archive with ID {MsgId}", messageSummary.UniqueId, existingMsg.Id);
+                        _logger.LogDebug("Message UID {Uid} already exists in archive with ID {MsgId}",
+                            messageSummary.UniqueId, existingMsg.Id);
                         var existingPath = messageHelperService.GetEmlPath(existingMsg);
                         if (!File.Exists(existingPath))
                         {
-                            _logger.LogError("Did not find eml file for existing message {MsgId} at path {Path}", existingMsg.Id, existingPath);
+                            _logger.LogError("Did not find eml file for existing message {MsgId} at path {Path}, will try to redownload",
+                                existingMsg.Id, existingPath);
                         }
-                        
-                        // check if message is now in different folder on the server
-                        // if yes, move in archive
-                        if (existingMsg.Folder != archiveFolder)
+                        else
                         {
-                            _logger.LogDebug("Moving message {MsgId} from folder '{OldFolder}' to '{NewFolder}'", 
-                                existingMsg.Id, existingMsg.Folder, archiveFolder);
-                            
-                            var oldEmlPath = messageHelperService.GetEmlPath(existingMsg);
-                            existingMsg.Folder = archiveFolder;
-                            var newEmlPath = messageHelperService.GetEmlPath(existingMsg);
-                            var dirName = Path.GetDirectoryName(newEmlPath);
-                            Directory.CreateDirectory(dirName!);
-                            File.Move(oldEmlPath, newEmlPath);
-                            await context.SaveChangesAsync(CancellationToken.None);
-                            
-                            _logger.LogDebug("Message moved successfully from {OldPath} to {NewPath}", oldEmlPath, newEmlPath);
-                        }
+                            // check if message is now in different folder on the server
+                            // if yes, move in archive
+                            if (existingMsg.Folder != archiveFolder)
+                            {
+                                _logger.LogDebug("Moving message {MsgId} from folder '{OldFolder}' to '{NewFolder}'",
+                                    existingMsg.Id, existingMsg.Folder, archiveFolder);
 
-                        continue;
+                                var oldEmlPath = messageHelperService.GetEmlPath(existingMsg);
+                                existingMsg.Folder = archiveFolder;
+                                var newEmlPath = messageHelperService.GetEmlPath(existingMsg);
+                                var dirName = Path.GetDirectoryName(newEmlPath);
+                                Directory.CreateDirectory(dirName!);
+                                File.Move(oldEmlPath, newEmlPath);
+                                await context.SaveChangesAsync(CancellationToken.None);
+
+                                _logger.LogDebug("Message moved successfully from {OldPath} to {NewPath}", oldEmlPath,
+                                    newEmlPath);
+                            }
+
+                            continue;
+                        }
                     }
 
                     _logger.LogDebug("Downloading full message UID {Uid} from server", messageSummary.UniqueId);
@@ -156,19 +164,23 @@ public partial class MessageImportService
                     }
                     else
                     {
-                        _logger.LogError("Message UID {Uid} was not saved - should not happen since duplicate is checked before", messageSummary.UniqueId);
+                        _logger.LogError(
+                            "Message UID {Uid} was not saved - should not happen since duplicate is checked before",
+                            messageSummary.UniqueId);
                     }
 
                     processedCount++;
                 }
 
-                _logger.LogInformation("Completed processing {ProcessedCount} messages in folder {Folder}", processedCount, folder.FullName);
+                _logger.LogInformation("Completed processing {ProcessedCount} messages in folder {Folder}",
+                    processedCount, folder.FullName);
 
                 // delete messages marked for deletion.
                 if (messageToDeleteIds.Count > 0)
                 {
 #if DEBUG
-                    _logger.LogInformation("Debug mode active, not deleting {DeleteCount} messages on server", messageToDeleteIds.Count);
+                    _logger.LogInformation("Debug mode active, not deleting {DeleteCount} messages on server",
+                        messageToDeleteIds.Count);
 #else
                         _logger.LogInformation("Deleting {DeleteCount} messages from server folder {Folder}", messageToDeleteIds.Count, folder.FullName);
                         foreach (var id in messageToDeleteIds)
@@ -184,14 +196,16 @@ public partial class MessageImportService
 
                 if (folderOptions is { SyncServerFolder: true })
                 {
-                    _logger.LogDebug("Syncing folder {Folder} - checking for messages to delete locally", folder.FullName);
-                    
+                    _logger.LogDebug("Syncing folder {Folder} - checking for messages to delete locally",
+                        folder.FullName);
+
                     var msgsToDelete = context.MailMessages.Where(msg =>
                             messagesOnServer.All(onServer => msg.Hash != onServer) && msg.Folder == folder.FullName)
                         .ToArray();
-                    
-                    _logger.LogDebug("Found {DeleteCount} messages in archive not present on server", msgsToDelete.Length);
-                    
+
+                    _logger.LogDebug("Found {DeleteCount} messages in archive not present on server",
+                        msgsToDelete.Length);
+
                     if (msgsToDelete is { Length: > 0 })
                     {
                         var deletedMessages = new List<MailMessage>();
@@ -212,7 +226,7 @@ public partial class MessageImportService
                         context.MailMessages.RemoveRange(deletedMessages);
                         await context.SaveChangesAsync(CancellationToken.None);
                         _logger.LogInformation("Removed {DeleteCount} messages from database", deletedMessages.Count);
-                        
+
                         progress.Report(new ProgressData(
                             LocalMessagesDeletedCount: progress.LocalMessagesDeletedCount + deletedMessages.Count));
                     }

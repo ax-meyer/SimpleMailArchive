@@ -47,23 +47,31 @@ public class MailMessageHelperService(ApplicationContext appContext, IDbContextF
     public async Task<bool> SaveMessage(MimeMessage mimeMessage, string folder, CancellationToken token = default)
     {
         var mailMessage = await MailParser.Construct(mimeMessage, folder, token);
-
+        
         await using var context = await dbContextFactory.CreateDbContextAsync(token);
-        if (await context.MailMessages.AnyAsync(o => o.Hash == mailMessage.Hash, token)) return false;
+        if (await context.MailMessages.FirstOrDefaultAsync(o => o.Hash == mailMessage.Hash, token) is
+            { } existingMessage)
+        {
+            logger.LogInformation("Message with UID {Uid} already exists as ID {Id}, just saving the file again", mimeMessage.MessageId, existingMessage.Id);
+            mailMessage = existingMessage;
+        }
+        else
+        {
+            await context.AddAsync(mailMessage, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
+            logger.LogInformation("Saved new message with UID {Uid} as ID {Id}", mimeMessage.MessageId, mailMessage.Id);
+        }
 
         token.ThrowIfCancellationRequested();
-
-        await context.AddAsync(mailMessage, CancellationToken.None);
-
+        
         var emlPath = GetEmlPath(mailMessage);
         var parentFolder = Path.GetDirectoryName(emlPath);
         if (parentFolder is null)
             throw new InvalidOperationException($"Could not extract parent directory from {emlPath}");
 
         Directory.CreateDirectory(parentFolder);
-        logger.LogInformation("Saving message with UID {Uid} to eml path {Path}", mimeMessage.MessageId, emlPath);
+        logger.LogInformation("Saving message file with UID {Uid} to eml path {Path}", mimeMessage.MessageId, emlPath);
         await mimeMessage.WriteToAsync(emlPath, CancellationToken.None);
-        await context.SaveChangesAsync(CancellationToken.None);
         return true;
     }
 }
