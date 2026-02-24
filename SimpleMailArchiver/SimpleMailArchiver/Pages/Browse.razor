@@ -1,13 +1,15 @@
 ﻿@page "/"
 @page "/browse"
-@using System.Diagnostics
 @using Radzen
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
+@using SimpleMailArchiver.Services
 @using SimpleMailArchiver.Shared
 
 @inject ArchiveContext DbContext;
 @inject DialogService DialogService;
+@inject DeleteService DeleteService;
+@inject ILogger<Browse> Logger;
 
 <h3>Mail Archive</h3>
 
@@ -64,6 +66,7 @@
             </HeaderTemplate>
             <Template>
                 <RadzenButton Click="@(() => DisplayMessage(context))">Open</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click="@(() => ConfirmDeleteMessage(context))">Delete</RadzenButton>
             </Template>
         </RadzenDataGridColumn>
 
@@ -78,11 +81,7 @@
     {
         await base.OnInitializedAsync();
 
-
         _messages = DbContext.MailMessages;
-        var sw = Stopwatch.StartNew();
-        var folders = _messages.Count();
-        sw.Stop();
     }
 
     private void DisplayMessage(MailMessage message)
@@ -92,6 +91,57 @@
             { "Message", message }
         };
         DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions { Width = "1200px", Height = "800px" });
+    }
+
+    private async Task ConfirmDeleteMessage(MailMessage message)
+    {
+        var result = await DialogService.Confirm(
+            $"Are you sure you want to delete the message '{message.Subject}' from '{message.Sender}'? This action cannot be undone.",
+            "Delete Message",
+            new ConfirmOptions
+            {
+                OkButtonText = "Delete",
+                CancelButtonText = "Cancel",
+            }
+        );
+
+        if (result == true)
+        {
+            await DeleteMessage(message);
+        }
+    }
+
+    private async Task DeleteMessage(MailMessage message)
+    {
+        try
+        {
+            var result = await DeleteService.DeleteMessageAsync(message.Id);
+            
+            if (result.IsSuccess)
+            {
+                Logger.LogInformation("Message {MessageId} deleted successfully", message.Id);
+                
+                // Refresh the data
+                _messages = DbContext.MailMessages;
+                if (_messagesGrid is not null)
+                {
+                    await _messagesGrid.Reload();
+                }
+                
+                await DialogService.Alert("Message deleted successfully.", "Success");
+            }
+            else
+            {
+                var errorMessages = string.Join("\n", result.Errors.Select(e => e.Message));
+                Logger.LogWarning("Failed to delete message {MessageId}: {Errors}", message.Id, errorMessages);
+                await DialogService.Alert($"Failed to delete the message:\n{errorMessages}", "Error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting message {MessageId}", message.Id);
+            await DialogService.Alert($"Error deleting message: {ex.Message}", "Error");
+        }
     }
 
 }

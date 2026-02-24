@@ -38,6 +38,7 @@ public class Startup
         services.AddSingleton(_appConfig);
         services.AddSingleton<ApplicationContext>();
         services.AddScoped<MailMessageHelperService>();
+        services.AddScoped<DeleteService>();
 
         // Set up directories
         if (!Directory.Exists(_appConfig.ArchiveBasePath))
