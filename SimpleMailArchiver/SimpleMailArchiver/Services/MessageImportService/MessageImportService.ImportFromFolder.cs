@@ -21,6 +21,10 @@ public partial class MessageImportService
 
         progress.Report(new ProgressData(TotalMessageCount: emlPaths.Length));
 
+        // make sure importFolderRoot ends with exactly one directory separator for correct relative path calculation
+        importFolderRoot = importFolderRoot.TrimEnd('/');
+        importFolderRoot += '/';
+        
         var basepathUri = new Uri(importFolderRoot);
         var groupedByFolder = emlPaths.GroupBy(path =>
             Path.GetDirectoryName(basepathUri.MakeRelativeUri(new Uri(path)).OriginalString));
