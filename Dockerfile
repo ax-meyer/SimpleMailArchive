@@ -12,9 +12,9 @@ RUN dotnet publish SimpleMailArchiver/SimpleMailArchiver.csproj -c Release -o ou
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
 WORKDIR /app
 COPY --from=build-env /app/out .
-ENV SMA_ARCHIVEBASEPATH "/etc/mailarchive/"
-ENV SMA_IMPORTBASEPATH "/etc/mailimport/"
-ENV SMA_ACCOUNTSCONFIGPATH "/etc/mailaccounts"
-ENV SMA_DBPATH "/etc/maildb"
+ENV SMA_ARCHIVEBASEPATH="/etc/mailarchive/"
+ENV SMA_IMPORTBASEPATH="/etc/mailimport/"
+ENV SMA_ACCOUNTSCONFIGPATH="/etc/mailaccounts"
+ENV SMA_DBPATH="/etc/maildb"
 
 ENTRYPOINT ["dotnet", "SimpleMailArchiver.dll"]

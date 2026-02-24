@@ -38,7 +38,7 @@ public static class MailParser
         // generate list of attachment filenames
         List<string> attachmentNames = [];
         attachmentNames.AddRange(mimeMessage.Attachments.Select(attachment =>
-            attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name));
+            attachment.ContentDisposition?.FileName ?? attachment.ContentType.Name).OfType<string>());
 
         foreach (var part in mimeMessage.BodyParts)
             if (part.ContentDisposition is { FileName: not null })
@@ -54,7 +54,7 @@ public static class MailParser
                     attachmentNames.Add(part.ContentType.Name);
             }
 
-        var subject = mimeMessage.Subject;
+        var subject = mimeMessage.Subject ?? string.Empty;
         var sender = mimeMessage.From.ToString();
         var recipient = mimeMessage.To.ToString();
         var ccRecipient = mimeMessage.Cc.ToString();
