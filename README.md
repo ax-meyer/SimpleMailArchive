@@ -5,7 +5,7 @@ A simple web application to backup & archive email from an IMAP server on your o
 Here are a few screenshots (please excuse the silly test emails, I just used a bunch of mails I found on the internet as test data to cover as many languages etc. as possible)
 
 ![Overview of the archive](doc/ressources/browse_view.png)
-![Viewing a single message](doc/ressources/message_view.png)
+![Viewing a single message](doc/ressources/message_view2.png)
 
 ## How to use
 Two options:
