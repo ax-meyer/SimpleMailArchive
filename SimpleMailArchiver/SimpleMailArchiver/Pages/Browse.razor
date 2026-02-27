@@ -9,13 +9,37 @@
 @inject ArchiveContext DbContext;
 @inject DialogService DialogService;
 @inject DeleteService DeleteService;
+@inject MoveService MoveService;
 @inject ILogger<Browse> Logger;
 
 <h3>Mail Archive</h3>
 
+@if (_selectedMessages?.Count > 0)
+{
+    <RadzenCard Variant="Variant.Outlined" class="rz-my-4">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenCheckBox @bind-Value="@_allowRowSelectOnRowClick" Name="CheckBox1" />
+            <RadzenLabel Text="Allow row select on row click" Component="CheckBox1" />
+            <RadzenButton Text="Clear selected rows" Click="@(() => ClearSelection())" />
+            @if (_selectedMessages?.Count > 0)
+            {
+                <span style="margin-left: auto;">
+                    <strong>@_selectedMessages.Count</strong> message(s) selected
+                </span>
+                <RadzenButton ButtonStyle="ButtonStyle.Info" Click="@MoveSelectedMessages" Icon="move">
+                    Move Selected
+                </RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Click="@ConfirmDeleteSelectedMessages" Icon="delete">
+                    Delete Selected
+                </RadzenButton>
+            }
+        </RadzenStack>
+    </RadzenCard>
+}
 
 <RadzenDataGrid
     @ref="@_messagesGrid"
+    AllowRowSelectOnRowClick="@_allowRowSelectOnRowClick"
     AllowPaging="@true"
     AllowSorting="@true"
     AllowFiltering="@true"
@@ -27,9 +51,24 @@
     AllowColumnResize="@true"
     AllowAlternatingRows="@true"
     PageSizeOptions="@(new[] { 10, 25, 50, 100, 250, 500, 1000 })"
-    Cou
+    SelectionMode="DataGridSelectionMode.Multiple"
+    @bind-Value="@_selectedMessages"
     Data="@_messages">
     <Columns>
+        <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" 
+                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                    Value="@(_selectedMessages == null || !_selectedMessages.Any() ? false : _messages != null && _messagesGrid != null && !_messages.AsQueryable().Where(_messagesGrid.ColumnsCollection).Any(i => !_selectedMessages.Contains(i)) ? true : null)"
+                    Change="@(args => OnSelectAllChanged(args))" />
+            </HeaderTemplate>
+            <Template Context="data">
+                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool"
+                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                    Value="@(_selectedMessages != null && _selectedMessages.Contains(data))" 
+                    Change=@(args => { if(!_allowRowSelectOnRowClick) { _messagesGrid?.SelectRow(data); }}) />
+            </Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Date)" Title="Date" SortOrder="SortOrder.Descending">
             <GroupFooterTemplate>
                 Showing <b>@_messages!.AsQueryable().Where(_messagesGrid!.ColumnsCollection).Count()</b> of
@@ -66,6 +105,7 @@
             </HeaderTemplate>
             <Template>
                 <RadzenButton Click="@(() => DisplayMessage(context))">Open</RadzenButton>
+                <RadzenButton ButtonStyle="ButtonStyle.Info" Click="@(() => ConfirmMoveMessage(context))">Move</RadzenButton>
                 <RadzenButton ButtonStyle="ButtonStyle.Danger" Click="@(() => ConfirmDeleteMessage(context))">Delete</RadzenButton>
             </Template>
         </RadzenDataGridColumn>
@@ -76,6 +116,8 @@
 @code {
     private IQueryable<MailMessage>? _messages;
     private RadzenDataGrid<MailMessage>? _messagesGrid;
+    private IList<MailMessage>? _selectedMessages;
+    private bool _allowRowSelectOnRowClick = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -91,6 +133,197 @@
             { "Message", message }
         };
         DialogService.Open<DisplayMail>("Mail", dict, new DialogOptions { Width = "1200px", Height = "800px" });
+    }
+
+    private async Task ConfirmMoveMessage(MailMessage message)
+    {
+        var parameters = new Dictionary<string, object?>
+        {
+            { nameof(MoveDialog.Parameters), new MoveDialogParameters() }
+        };
+        
+        var result = await DialogService.OpenAsync<MoveDialog>(
+            "Move Message",
+            parameters,
+            new DialogOptions { Width = "600px", Height = "400px" }
+        );
+
+        if (result is MoveDialogParameters moveParams && !string.IsNullOrWhiteSpace(moveParams.SelectedFolder))
+        {
+            await MoveMessage(message, moveParams.SelectedFolder);
+        }
+    }
+
+    private async Task MoveSelectedMessages()
+    {
+        if (_selectedMessages?.Count == 0)
+        {
+            await DialogService.Alert("No messages selected", "Info");
+            return;
+        }
+
+        var parameters = new Dictionary<string, object?>
+        {
+            { nameof(MoveDialog.Parameters), new MoveDialogParameters() }
+        };
+        
+        var result = await DialogService.OpenAsync<MoveDialog>(
+            "Move Messages",
+            parameters,
+            new DialogOptions { Width = "600px", Height = "400px" }
+        );
+
+        if (result is MoveDialogParameters moveParams && !string.IsNullOrWhiteSpace(moveParams.SelectedFolder))
+        {
+            await BulkMoveMessages(_selectedMessages!.ToList(), moveParams.SelectedFolder);
+        }
+    }
+
+    private async Task MoveMessage(MailMessage message, string targetFolder)
+    {
+        try
+        {
+            var result = await MoveService.MoveMessageAsync(message.Id, targetFolder);
+
+            if (result.IsSuccess)
+            {
+                Logger.LogInformation("Message {MessageId} moved successfully to {TargetFolder}", message.Id, targetFolder);
+
+                // Refresh the data
+                _messages = DbContext.MailMessages;
+                if (_messagesGrid is not null)
+                {
+                    await _messagesGrid.Reload();
+                }
+                ClearSelection();
+
+                await DialogService.Alert($"Message moved to '{targetFolder}' successfully.", "Success");
+            }
+            else
+            {
+                var errorMessages = string.Join("\n", result.Errors.Select(e => e.Message));
+                Logger.LogWarning("Failed to move message {MessageId}: {Errors}", message.Id, errorMessages);
+                await DialogService.Alert($"Failed to move the message:\n{errorMessages}", "Error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error moving message {MessageId}", message.Id);
+            await DialogService.Alert($"Error moving message: {ex.Message}", "Error");
+        }
+    }
+
+    private async Task BulkMoveMessages(List<MailMessage> messages, string targetFolder)
+    {
+        var successCount = 0;
+        var failureCount = 0;
+
+        foreach (var message in messages)
+        {
+            var result = await MoveService.MoveMessageAsync(message.Id, targetFolder);
+            if (result.IsSuccess)
+                successCount++;
+            else
+                failureCount++;
+        }
+
+        // Refresh the data
+        _messages = DbContext.MailMessages;
+        if (_messagesGrid is not null)
+        {
+            await _messagesGrid.Reload();
+        }
+        ClearSelection();
+
+        var messageText = failureCount == 0
+            ? $"All {successCount} message(s) moved to '{targetFolder}' successfully."
+            : $"Moved {successCount} message(s) successfully. {failureCount} failed.";
+
+        await DialogService.Alert(messageText, failureCount > 0 ? "Partial Success" : "Success");
+    }
+
+    private Task OnSelectAllChanged(bool? value)
+    {
+        try
+        {
+            if (value == true)
+            {
+                // Select all filtered messages
+                if (_messages != null && _messagesGrid != null)
+                {
+                    var filteredMessages = _messages.AsQueryable().Where(_messagesGrid.ColumnsCollection).ToList();
+                    _selectedMessages = filteredMessages;
+                }
+            }
+            else
+            {
+                ClearSelection();
+            }
+
+            return Task.CompletedTask;
+        }
+        catch (Exception exception)
+        {
+            return Task.FromException(exception);
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedMessages = null;
+    }
+
+    private async Task ConfirmDeleteSelectedMessages()
+    {
+        if (_selectedMessages?.Count == 0)
+        {
+            await DialogService.Alert("No messages selected", "Info");
+            return;
+        }
+
+        var result = await DialogService.Confirm(
+            $"Are you sure you want to delete {_selectedMessages?.Count} message(s)? This action cannot be undone.",
+            "Delete Messages",
+            new ConfirmOptions
+            {
+                OkButtonText = "Delete",
+                CancelButtonText = "Cancel",
+            }
+        );
+
+        if (result == true)
+        {
+            await BulkDeleteMessages(_selectedMessages!.ToList());
+        }
+    }
+
+    private async Task BulkDeleteMessages(List<MailMessage> messages)
+    {
+        var successCount = 0;
+        var failureCount = 0;
+
+        foreach (var message in messages)
+        {
+            var result = await DeleteService.DeleteMessageAsync(message.Id);
+            if (result.IsSuccess)
+                successCount++;
+            else
+                failureCount++;
+        }
+
+        // Refresh the data
+        _messages = DbContext.MailMessages;
+        if (_messagesGrid is not null)
+        {
+            await _messagesGrid.Reload();
+        }
+        ClearSelection();
+
+        var messageText = failureCount == 0
+            ? $"All {successCount} message(s) deleted successfully."
+            : $"Deleted {successCount} message(s). {failureCount} failed.";
+
+        await DialogService.Alert(messageText, failureCount > 0 ? "Partial Success" : "Success");
     }
 
     private async Task ConfirmDeleteMessage(MailMessage message)
@@ -116,18 +349,18 @@
         try
         {
             var result = await DeleteService.DeleteMessageAsync(message.Id);
-            
+
             if (result.IsSuccess)
             {
                 Logger.LogInformation("Message {MessageId} deleted successfully", message.Id);
-                
+
                 // Refresh the data
                 _messages = DbContext.MailMessages;
                 if (_messagesGrid is not null)
                 {
                     await _messagesGrid.Reload();
                 }
-                
+
                 await DialogService.Alert("Message deleted successfully.", "Success");
             }
             else

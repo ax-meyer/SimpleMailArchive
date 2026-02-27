@@ -1,0 +1,66 @@
+@using Radzen
+@using Radzen.Blazor
+@using SimpleMailArchiver.Services
+@using SimpleMailArchiver.Shared
+
+@inject MoveService MoveService
+@inject DialogService DialogService
+
+<div style="padding: 20px;">
+    <p>Select the target folder to move the message(s) to:</p>
+    
+    <RadzenDropDown 
+        Value="@_parameters.SelectedFolder" 
+        ValueChanged="@((string? value) => _parameters.SelectedFolder = value)"
+        Data="@_availableFolders" 
+        Style="width: 100%; margin: 20px 0;">
+    </RadzenDropDown>
+
+    @if (string.IsNullOrEmpty(_parameters.SelectedFolder))
+    {
+        <p style="color: #999; font-size: 0.9em;">Please select a folder</p>
+    }
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+        <RadzenButton 
+            ButtonStyle="ButtonStyle.Light" 
+            Click="@CancelMove">
+            Cancel
+        </RadzenButton>
+        <RadzenButton 
+            ButtonStyle="ButtonStyle.Primary" 
+            Click="@ConfirmMove"
+            Disabled="@string.IsNullOrEmpty(_parameters.SelectedFolder)">
+            Move
+        </RadzenButton>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MoveDialogParameters Parameters { get; set; } = new();
+
+    private MoveDialogParameters _parameters = new();
+    private List<string> _availableFolders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        _parameters = Parameters ?? new MoveDialogParameters();
+        _availableFolders = await MoveService.GetAvailableFoldersAsync();
+    }
+
+    private void ConfirmMove()
+    {
+        DialogService.Close(_parameters);
+    }
+
+    private void CancelMove()
+    {
+        DialogService.Close(null);
+    }
+}
+
+
+
+
