@@ -81,7 +81,7 @@
         <RadzenDataGridColumn Property="@nameof(MailMessage.Recipient)" Title="Recipient"/>
         <RadzenDataGridColumn Property="@nameof(MailMessage.Folder)" Title="Folder"
                               FilterMode="FilterMode.CheckBoxList"/>
-        <RadzenDataGridColumn Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
+        <RadzenDataGridColumn Width="60px" Property="@nameof(MailMessage.HasAttachments)" Sortable="@false" Filterable="@false">
             <HeaderTemplate>
                 <RadzenIcon Icon="attach_file"/>
             </HeaderTemplate>
