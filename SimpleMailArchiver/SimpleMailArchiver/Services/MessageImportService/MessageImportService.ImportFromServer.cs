@@ -89,8 +89,8 @@ public partial class MessageImportService
 
                     _logger.LogDebug("Processing message UID {Uid} with InternalDate {Date}", messageSummary.UniqueId,
                         messageSummary.InternalDate);
-
-                    using var hmsg = new MimeMessage(messageSummary.Headers);
+                    
+                    using var hmsg = new MimeMessage(messageSummary.Headers ?? []);
                     hmsg.Date = (DateTimeOffset)messageSummary.InternalDate!;
                     var headerMsg = await MailParser.Construct(hmsg, archiveFolder, ct);
                     _logger.LogDebug("Parsed message header: Subject={Subject}, From={From}, Hash={Hash}",
