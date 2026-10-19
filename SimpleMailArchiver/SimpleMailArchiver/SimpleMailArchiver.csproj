@@ -25,6 +25,8 @@
         <PackageReference Include="Serilog.AspNetCore" Version="10.0.0"/>
         <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
+        <!-- Transitive via MailKit/MimeKit; pinned to patch CVE-2026-70162 / CVE-2026-84008 -->
+        <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     </ItemGroup>
 
     <ItemGroup>
