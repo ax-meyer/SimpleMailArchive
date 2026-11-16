@@ -4,6 +4,7 @@
 @using Radzen.Blazor
 @using SimpleMailArchiver.Data
 @inject IJSRuntime JsRuntime
+@inject ILogger<DisplayMail> Logger
 <RadzenStack Class="display-mail-root">
 
     <!-- HEADER -->
@@ -90,7 +91,18 @@
 
     private async Task Download()
     {
-        await JsRuntime.InvokeVoidAsync("downloadMessage", Message.Id);
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("downloadMessage", Message.Id);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser left while the call was in flight; there is nobody to download to.
+        }
+        catch (JSException e)
+        {
+            Logger.LogError(e, "Could not start the download of message {MessageId}", Message.Id);
+        }
     }
 
     private bool HasAttachments()
